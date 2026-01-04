@@ -1,20 +1,20 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Trash2, ChevronLeft, ChevronRight, Download, X } from 'lucide-react';
+import { Search, Trash2, ChevronLeft, ChevronRight, Download, X, Filter, Gamepad2 } from 'lucide-react';
 import { getHistory, deleteAnalysis, getAnalysis, type HistoryResponse, type AnalysisSummary } from '../services/api';
 
 // Tag category configuration
 const TAG_CATEGORIES: Record<string, { label: string; color: string; prefix: string }> = {
-  gameplay: { label: 'Gameplay', color: 'bg-purple-100 text-purple-700', prefix: 'gameplay_' },
-  narrative: { label: 'Narrative', color: 'bg-blue-100 text-blue-700', prefix: 'narrative_' },
-  theme: { label: 'Theme', color: 'bg-indigo-100 text-indigo-700', prefix: 'theme_' },
-  setting: { label: 'Setting', color: 'bg-cyan-100 text-cyan-700', prefix: 'setting_' },
-  mechanic: { label: 'Mechanic', color: 'bg-teal-100 text-teal-700', prefix: 'mechanic_' },
-  visual: { label: 'Visual', color: 'bg-violet-100 text-violet-700', prefix: 'visual_' },
-  features: { label: 'Features', color: 'bg-gray-100 text-gray-700', prefix: '' },
-  engagement: { label: 'Engagement', color: 'bg-amber-100 text-amber-700', prefix: 'engagement_' },
-  monetization: { label: 'Monetization', color: 'bg-emerald-100 text-emerald-700', prefix: 'monetization_' },
-  protagonist: { label: 'Protagonist', color: 'bg-pink-100 text-pink-700', prefix: 'protagonist_' },
+  gameplay: { label: 'Gameplay', color: 'tag-gameplay', prefix: 'gameplay_' },
+  narrative: { label: 'Narrative', color: 'tag-narrative', prefix: 'narrative_' },
+  theme: { label: 'Theme', color: 'tag-theme', prefix: 'theme_' },
+  setting: { label: 'Setting', color: 'tag-setting', prefix: 'setting_' },
+  mechanic: { label: 'Mechanic', color: 'tag-mechanic', prefix: 'mechanic_' },
+  visual: { label: 'Visual', color: 'tag-visual', prefix: 'visual_' },
+  features: { label: 'Features', color: 'tag-features', prefix: '' },
+  engagement: { label: 'Engagement', color: 'tag-engagement', prefix: 'engagement_' },
+  monetization: { label: 'Monetization', color: 'tag-monetization', prefix: 'monetization_' },
+  protagonist: { label: 'Protagonist', color: 'tag-protagonist', prefix: 'protagonist_' },
 };
 
 const FEATURE_TAGS = ['multiplayer', 'open_world', 'procedural', 'story_driven'];
@@ -55,40 +55,40 @@ function GameDetailModal({ gameId, onClose }: { gameId: number; onClose: () => v
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center justify-between p-6 border-b border-dark-600">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-white">
               {analysis?.detected_game || analysis?.game_name || 'Loading...'}
             </h2>
             {analysis?.primary_genre && (
-              <p className="text-sm text-gray-500">{analysis.primary_genre}</p>
+              <p className="text-sm text-dark-200 mt-1">{analysis.primary_genre}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-2 text-dark-300 hover:text-white transition-colors rounded-lg hover:bg-dark-600"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-4 overflow-y-auto max-h-[60vh]">
+        <div className="p-6 overflow-y-auto max-h-[60vh]">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <div className="flex items-center justify-center py-12">
+              <div className="loading-spinner h-8 w-8"></div>
             </div>
           ) : error ? (
-            <div className="text-red-600 text-center py-8">Failed to load analysis</div>
+            <div className="text-red-400 text-center py-8">Failed to load analysis</div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {/* Analysis notes */}
               {analysis?.analysis_notes && (
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-sm text-gray-600">{analysis.analysis_notes}</p>
+                <div className="bg-dark-700 rounded-xl p-4 border border-dark-600">
+                  <p className="text-sm text-dark-100">{analysis.analysis_notes}</p>
                 </div>
               )}
 
@@ -99,12 +99,12 @@ function GameDetailModal({ gameId, onClose }: { gameId: number; onClose: () => v
 
                 return (
                   <div key={category}>
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">{config.label}</h3>
+                    <h3 className="text-sm font-semibold text-dark-200 mb-3 uppercase tracking-wide">{config.label}</h3>
                     <div className="flex flex-wrap gap-2">
                       {tags.map((tag) => (
                         <span
                           key={tag}
-                          className={`${config.color} px-2 py-1 rounded-full text-xs font-medium capitalize`}
+                          className={`${config.color} px-3 py-1.5 rounded-lg text-xs font-medium capitalize`}
                         >
                           {tag}
                         </span>
@@ -115,20 +115,20 @@ function GameDetailModal({ gameId, onClose }: { gameId: number; onClose: () => v
               })}
 
               {Object.keys(groupedTags).length === 0 && (
-                <p className="text-gray-500 text-center py-4">No tags found</p>
+                <p className="text-dark-300 text-center py-4">No tags found</p>
               )}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t bg-gray-50">
-          <div className="flex items-center justify-between text-sm text-gray-500">
+        <div className="p-4 border-t border-dark-600 bg-dark-700/50">
+          <div className="flex items-center justify-between text-sm text-dark-200">
             <span>
               Sources: {analysis?.sources_used?.join(', ') || '-'}
             </span>
-            <span>
-              Confidence: {analysis?.confidence || '-'}
+            <span className={`confidence-${analysis?.confidence} px-2 py-1 rounded-lg text-xs font-medium`}>
+              {analysis?.confidence || '-'} confidence
             </span>
           </div>
         </div>
@@ -139,29 +139,17 @@ function GameDetailModal({ gameId, onClose }: { gameId: number; onClose: () => v
 
 function ConfidenceBadge({ confidence }: { confidence?: string }) {
   if (!confidence) return null;
-
-  const colorClass = {
-    high: 'confidence-high',
-    medium: 'confidence-medium',
-    low: 'confidence-low',
-  }[confidence] || 'bg-gray-100 text-gray-600';
-
   return (
-    <span className={`${colorClass} px-2 py-1 rounded-full text-xs font-medium`}>
+    <span className={`confidence-${confidence} px-2 py-1 rounded-lg text-xs font-medium`}>
       {confidence}
     </span>
   );
 }
 
 function SourceBadge({ source }: { source: string }) {
-  const colors: Record<string, string> = {
-    steam: 'bg-blue-100 text-blue-700',
-    xbox: 'bg-green-100 text-green-700',
-    youtube: 'bg-red-100 text-red-700',
-  };
-
+  const sourceClass = `source-${source}`;
   return (
-    <span className={`${colors[source] || 'bg-gray-100 text-gray-600'} px-2 py-0.5 rounded text-xs`}>
+    <span className={`${sourceClass} px-2 py-0.5 rounded-lg text-xs font-medium`}>
       {source}
     </span>
   );
@@ -175,28 +163,28 @@ function NitrogenBadges({ engagement, monetization, protagonist }: {
   const badges = [];
   if (engagement > 0) {
     badges.push(
-      <span key="eng" className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-xs" title="Engagement tags">
+      <span key="eng" className="tag-engagement px-2 py-0.5 rounded-lg text-xs font-medium" title="Engagement tags">
         E:{engagement}
       </span>
     );
   }
   if (monetization > 0) {
     badges.push(
-      <span key="mon" className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-xs" title="Monetization tags">
+      <span key="mon" className="tag-monetization px-2 py-0.5 rounded-lg text-xs font-medium" title="Monetization tags">
         M:{monetization}
       </span>
     );
   }
   if (protagonist > 0) {
     badges.push(
-      <span key="pro" className="bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded text-xs" title="Protagonist tags">
+      <span key="pro" className="tag-protagonist px-2 py-0.5 rounded-lg text-xs font-medium" title="Protagonist tags">
         P:{protagonist}
       </span>
     );
   }
 
   if (badges.length === 0) {
-    return <span className="text-gray-400 text-xs">-</span>;
+    return <span className="text-dark-400 text-xs">-</span>;
   }
 
   return <div className="flex flex-wrap gap-1">{badges}</div>;
@@ -259,183 +247,258 @@ export default function HistoryPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `gametagger-history-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `gametagger-export-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in">
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex-1 min-w-64">
+      <div className="glass-card p-5">
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-dark-300" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Search games..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Search games by name..."
+                className="input-xbox pl-12"
               />
             </div>
           </div>
 
-          <select
-            value={confidence}
-            onChange={(e) => {
-              setConfidence(e.target.value);
-              setPage(1);
-            }}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          >
-            <option value="">All Confidence</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
+          <div className="flex flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-dark-300" />
+              <select
+                value={confidence}
+                onChange={(e) => {
+                  setConfidence(e.target.value);
+                  setPage(1);
+                }}
+                className="select-xbox"
+              >
+                <option value="">All Confidence</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
 
-          <button
-            onClick={handleExport}
-            disabled={!data?.items?.length}
-            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Download className="h-4 w-4" />
-            <span>Export CSV</span>
-          </button>
+            <button
+              onClick={handleExport}
+              disabled={!data?.items?.length}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Export CSV</span>
+            </button>
+          </div>
         </div>
+
+        {/* Results count */}
+        {data && (
+          <div className="mt-4 pt-4 border-t border-dark-600">
+            <p className="text-sm text-dark-300">
+              Showing <span className="text-white font-medium">{data.items.length}</span> of{' '}
+              <span className="text-white font-medium">{data.total}</span> games
+              {debouncedSearch && (
+                <span> matching "<span className="text-xbox-green">{debouncedSearch}</span>"</span>
+              )}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div className="glass-card overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <div className="loading-spinner h-10 w-10"></div>
           </div>
         ) : error ? (
-          <div className="p-8 text-center text-red-600">
-            Failed to load history. Is the backend running?
+          <div className="p-8 text-center">
+            <div className="text-red-400 mb-2">Failed to load games</div>
+            <p className="text-dark-400 text-sm">Please check if the backend is running.</p>
           </div>
         ) : data?.items.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            No analyses found. Start by analyzing some games!
+          <div className="p-12 text-center">
+            <Gamepad2 className="h-16 w-16 text-dark-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">No games found</h3>
+            <p className="text-dark-300">
+              {debouncedSearch
+                ? `No games match your search for "${debouncedSearch}"`
+                : 'Start by analyzing some games!'}
+            </p>
           </div>
         ) : (
           <>
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Game
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Genre
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Confidence
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sources
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tags
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nitrogen
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {data?.items.map((item: AnalysisSummary) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => setSelectedGameId(item.id)}
-                  >
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-gray-900 hover:text-primary-600">
-                          {item.detected_game || item.game_name}
-                        </p>
-                        {item.detected_game && item.detected_game !== item.game_name && (
-                          <p className="text-sm text-gray-500">searched: {item.game_name}</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {item.primary_genre || '-'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <ConfidenceBadge confidence={item.confidence} />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
+            {/* Desktop Table */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Game</th>
+                    <th>Genre</th>
+                    <th>Confidence</th>
+                    <th>Sources</th>
+                    <th>Tags</th>
+                    <th>Nitrogen</th>
+                    <th>Date</th>
+                    <th className="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data?.items.map((item: AnalysisSummary) => (
+                    <tr
+                      key={item.id}
+                      className="cursor-pointer"
+                      onClick={() => setSelectedGameId(item.id)}
+                    >
+                      <td>
+                        <div>
+                          <p className="font-medium text-white hover:text-xbox-green transition-colors">
+                            {item.detected_game || item.game_name}
+                          </p>
+                          {item.detected_game && item.detected_game !== item.game_name && (
+                            <p className="text-xs text-dark-400 mt-0.5">searched: {item.game_name}</p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="text-dark-200">
+                        {item.primary_genre || '-'}
+                      </td>
+                      <td>
+                        <ConfidenceBadge confidence={item.confidence} />
+                      </td>
+                      <td>
+                        <div className="flex flex-wrap gap-1">
+                          {item.sources_used.map((source) => (
+                            <SourceBadge key={source} source={source} />
+                          ))}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="bg-dark-600 text-white px-2 py-1 rounded-lg text-xs font-medium">
+                          {item.tag_count}
+                        </span>
+                      </td>
+                      <td>
+                        <NitrogenBadges
+                          engagement={item.engagement_count}
+                          monetization={item.monetization_count}
+                          protagonist={item.protagonist_count}
+                        />
+                      </td>
+                      <td className="text-dark-300 text-sm">
+                        {new Date(item.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="text-right">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm('Delete this analysis?')) {
+                              deleteMutation.mutate(item.id);
+                            }
+                          }}
+                          className="p-2 text-dark-400 hover:text-red-400 transition-colors rounded-lg hover:bg-dark-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="lg:hidden divide-y divide-dark-700">
+              {data?.items.map((item: AnalysisSummary) => (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedGameId(item.id)}
+                  className="p-4 hover:bg-dark-700/50 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="font-medium text-white">
+                        {item.detected_game || item.game_name}
+                      </p>
+                      <p className="text-sm text-dark-300">{item.primary_genre || '-'}</p>
+                    </div>
+                    <ConfidenceBadge confidence={item.confidence} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
                         {item.sources_used.map((source) => (
                           <SourceBadge key={source} source={source} />
                         ))}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {item.tag_count} tags
-                    </td>
-                    <td className="px-6 py-4">
-                      <NitrogenBadges
-                        engagement={item.engagement_count}
-                        monetization={item.monetization_count}
-                        protagonist={item.protagonist_count}
-                      />
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
+                      <span className="bg-dark-600 text-white px-2 py-0.5 rounded text-xs">
+                        {item.tag_count} tags
+                      </span>
+                    </div>
+                    <span className="text-xs text-dark-400">
                       {new Date(item.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm('Delete this analysis?')) {
-                            deleteMutation.mutate(item.id);
-                          }
-                        }}
-                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
 
             {/* Pagination */}
             {data && data.pages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t">
-                <p className="text-sm text-gray-500">
-                  Showing {(page - 1) * 15 + 1} to {Math.min(page * 15, data.total)} of {data.total} results
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-dark-700">
+                <p className="text-sm text-dark-300">
+                  Page <span className="text-white font-medium">{page}</span> of{' '}
+                  <span className="text-white font-medium">{data.pages}</span>
                 </p>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="p-2 rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    className="btn-secondary p-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-5 w-5" />
                   </button>
-                  <span className="text-sm text-gray-600">
-                    Page {page} of {data.pages}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, data.pages) }, (_, i) => {
+                      let pageNum;
+                      if (data.pages <= 5) {
+                        pageNum = i + 1;
+                      } else if (page <= 3) {
+                        pageNum = i + 1;
+                      } else if (page >= data.pages - 2) {
+                        pageNum = data.pages - 4 + i;
+                      } else {
+                        pageNum = page - 2 + i;
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setPage(pageNum)}
+                          className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
+                            page === pageNum
+                              ? 'bg-xbox-green text-white'
+                              : 'bg-dark-600 text-dark-200 hover:bg-dark-500'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
                   <button
                     onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
                     disabled={page === data.pages}
-                    className="p-2 rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    className="btn-secondary p-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-5 w-5" />
                   </button>
                 </div>
               </div>

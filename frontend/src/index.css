@@ -1,39 +1,238 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Base styles */
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-dark-900 text-white antialiased;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - Xbox themed */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  @apply bg-dark-800;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded;
+  @apply bg-dark-500 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
+  @apply bg-xbox-green;
 }
 
-/* Tag badge colors */
-.tag-gameplay { @apply bg-blue-100 text-blue-800; }
-.tag-narrative { @apply bg-purple-100 text-purple-800; }
-.tag-theme { @apply bg-green-100 text-green-800; }
-.tag-setting { @apply bg-yellow-100 text-yellow-800; }
-.tag-mechanic { @apply bg-orange-100 text-orange-800; }
-.tag-visual { @apply bg-pink-100 text-pink-800; }
-.tag-features { @apply bg-cyan-100 text-cyan-800; }
+/* Glass morphism cards */
+.glass-card {
+  @apply bg-dark-800/80 backdrop-blur-xl border border-dark-600 rounded-2xl;
+}
+
+.glass-card-hover {
+  @apply transition-all duration-300 hover:border-xbox-green/50 hover:shadow-xbox;
+}
+
+/* Xbox button styles */
+.btn-xbox {
+  @apply bg-xbox-green text-white font-semibold px-6 py-3 rounded-lg
+         transition-all duration-200 ease-out
+         hover:bg-xbox-green-light hover:shadow-xbox
+         active:scale-[0.98]
+         disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none;
+}
+
+.btn-xbox-outline {
+  @apply border-2 border-xbox-green text-xbox-green font-semibold px-6 py-3 rounded-lg
+         transition-all duration-200 ease-out
+         hover:bg-xbox-green hover:text-white hover:shadow-xbox
+         active:scale-[0.98];
+}
+
+.btn-secondary {
+  @apply bg-dark-600 text-white font-medium px-5 py-2.5 rounded-lg
+         transition-all duration-200 ease-out
+         hover:bg-dark-500
+         active:scale-[0.98];
+}
+
+/* Tag category colors - Xbox themed */
+.tag-gameplay {
+  @apply bg-purple-500/20 text-purple-300 border border-purple-500/30;
+}
+.tag-narrative {
+  @apply bg-blue-500/20 text-blue-300 border border-blue-500/30;
+}
+.tag-theme {
+  @apply bg-indigo-500/20 text-indigo-300 border border-indigo-500/30;
+}
+.tag-setting {
+  @apply bg-cyan-500/20 text-cyan-300 border border-cyan-500/30;
+}
+.tag-mechanic {
+  @apply bg-teal-500/20 text-teal-300 border border-teal-500/30;
+}
+.tag-visual {
+  @apply bg-violet-500/20 text-violet-300 border border-violet-500/30;
+}
+.tag-features {
+  @apply bg-gray-500/20 text-gray-300 border border-gray-500/30;
+}
+.tag-engagement {
+  @apply bg-amber-500/20 text-amber-300 border border-amber-500/30;
+}
+.tag-monetization {
+  @apply bg-emerald-500/20 text-emerald-300 border border-emerald-500/30;
+}
+.tag-protagonist {
+  @apply bg-pink-500/20 text-pink-300 border border-pink-500/30;
+}
 
 /* Confidence badges */
-.confidence-high { @apply bg-green-100 text-green-800; }
-.confidence-medium { @apply bg-yellow-100 text-yellow-800; }
-.confidence-low { @apply bg-red-100 text-red-800; }
+.confidence-high {
+  @apply bg-xbox-green/20 text-xbox-green-glow border border-xbox-green/30;
+}
+.confidence-medium {
+  @apply bg-amber-500/20 text-amber-300 border border-amber-500/30;
+}
+.confidence-low {
+  @apply bg-red-500/20 text-red-300 border border-red-500/30;
+}
+
+/* Source badges */
+.source-steam {
+  @apply bg-blue-600/20 text-blue-300 border border-blue-500/30;
+}
+.source-xbox {
+  @apply bg-xbox-green/20 text-xbox-green-glow border border-xbox-green/30;
+}
+.source-youtube {
+  @apply bg-red-600/20 text-red-300 border border-red-500/30;
+}
+
+/* Navigation active state */
+.nav-link {
+  @apply flex items-center gap-2 px-4 py-3 text-dark-100 font-medium rounded-xl
+         transition-all duration-200
+         hover:bg-dark-700 hover:text-white;
+}
+
+.nav-link-active {
+  @apply bg-xbox-green/10 text-xbox-green-glow border-l-2 border-xbox-green;
+}
+
+/* Stat card glow effect */
+.stat-card {
+  @apply relative overflow-hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(16, 124, 16, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+}
+
+/* Chart tooltip styling */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  @apply bg-dark-700 border border-dark-500 rounded-lg shadow-xl;
+}
+
+/* Table styles */
+.data-table {
+  @apply w-full;
+}
+
+.data-table thead {
+  @apply bg-dark-700/50;
+}
+
+.data-table th {
+  @apply text-left px-6 py-4 text-xs font-semibold text-dark-100 uppercase tracking-wider;
+}
+
+.data-table tbody tr {
+  @apply border-b border-dark-700 transition-colors duration-150;
+}
+
+.data-table tbody tr:hover {
+  @apply bg-dark-700/50;
+}
+
+.data-table td {
+  @apply px-6 py-4;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4;
+  animation: fade-in 0.2s ease-out;
+}
+
+.modal-content {
+  @apply bg-dark-800 border border-dark-600 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden;
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Input styles */
+.input-xbox {
+  @apply w-full bg-dark-700 border border-dark-500 rounded-lg px-4 py-3
+         text-white placeholder-dark-200
+         transition-all duration-200
+         focus:outline-none focus:border-xbox-green focus:ring-2 focus:ring-xbox-green/20;
+}
+
+.select-xbox {
+  @apply bg-dark-700 border border-dark-500 rounded-lg px-4 py-2.5
+         text-white cursor-pointer
+         transition-all duration-200
+         focus:outline-none focus:border-xbox-green focus:ring-2 focus:ring-xbox-green/20;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  @apply animate-spin rounded-full border-2 border-dark-500 border-t-xbox-green;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-gradient-to-r from-xbox-green to-xbox-green-glow bg-clip-text text-transparent;
+}
+
+/* Hero section gradient */
+.hero-gradient {
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(16, 124, 16, 0.15), transparent);
+}
+
+/* Sidebar gradient */
+.sidebar-gradient {
+  background: linear-gradient(180deg, rgba(16, 124, 16, 0.05) 0%, transparent 100%);
+}
+
+/* Glossary category header */
+.glossary-category {
+  @apply bg-gradient-to-r from-dark-700 to-transparent;
+}
+
+/* Animation utilities */
+.animate-in {
+  animation: fade-in 0.3s ease-out, slide-up 0.3s ease-out;
+}
+
+/* Focus ring */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-xbox-green/50 focus:ring-offset-2 focus:ring-offset-dark-800;
+}

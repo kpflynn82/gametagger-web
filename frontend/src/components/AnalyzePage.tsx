@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Search, Loader2, CheckCircle, XCircle, Clock, Save } from 'lucide-react';
+import { Search, Loader2, CheckCircle, XCircle, Clock, Save, Gamepad2, Info, Zap } from 'lucide-react';
 import { startTagging, saveJobResult, type JobCreatedResponse, type GameAnalysis } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 
@@ -12,23 +12,53 @@ const TAG_CATEGORIES: Record<string, { label: string; color: string }> = {
   mechanic: { label: 'Mechanics', color: 'tag-mechanic' },
   visual: { label: 'Visual', color: 'tag-visual' },
   features: { label: 'Features', color: 'tag-features' },
+  engagement: { label: 'Engagement', color: 'tag-engagement' },
+  monetization: { label: 'Monetization', color: 'tag-monetization' },
+  protagonist: { label: 'Protagonist', color: 'tag-protagonist' },
 };
+
+const SOURCE_CONFIG = [
+  {
+    id: 'steam',
+    label: 'Steam Store',
+    description: 'Official store page data',
+    time: '1-3s',
+    icon: '🎮',
+    color: 'source-steam',
+  },
+  {
+    id: 'xbox',
+    label: 'Xbox Store',
+    description: 'Microsoft Store listing',
+    time: '1-3s',
+    icon: '🟢',
+    color: 'source-xbox',
+  },
+  {
+    id: 'youtube',
+    label: 'YouTube Video',
+    description: 'Gameplay video analysis',
+    time: '30-90s',
+    icon: '📺',
+    color: 'source-youtube',
+  },
+];
 
 function ProgressStep({ label, status }: { label: string; status: string }) {
   const getStatusIcon = () => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-xbox-green" />;
       case 'searching':
       case 'fetching':
       case 'downloading':
       case 'extracting':
       case 'processing':
-        return <Loader2 className="h-5 w-5 text-primary-500 animate-spin" />;
+        return <Loader2 className="h-5 w-5 text-xbox-green animate-spin" />;
       case 'failed':
-        return <XCircle className="h-5 w-5 text-red-500" />;
+        return <XCircle className="h-5 w-5 text-red-400" />;
       default:
-        return <Clock className="h-5 w-5 text-gray-300" />;
+        return <Clock className="h-5 w-5 text-dark-400" />;
     }
   };
 
@@ -37,15 +67,15 @@ function ProgressStep({ label, status }: { label: string; status: string }) {
       case 'searching':
         return 'Searching...';
       case 'fetching':
-        return 'Fetching...';
+        return 'Fetching data...';
       case 'downloading':
-        return 'Downloading...';
+        return 'Downloading video...';
       case 'extracting':
         return 'Extracting frames...';
       case 'processing':
         return 'Processing...';
       case 'completed':
-        return 'Done';
+        return 'Complete';
       case 'failed':
         return 'Failed';
       default:
@@ -53,12 +83,25 @@ function ProgressStep({ label, status }: { label: string; status: string }) {
     }
   };
 
+  const isActive = ['searching', 'fetching', 'downloading', 'extracting', 'processing'].includes(status);
+  const isComplete = status === 'completed';
+  const isFailed = status === 'failed';
+
   return (
-    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-      {getStatusIcon()}
-      <div className="flex-1">
-        <p className="font-medium text-gray-900">{label}</p>
-        <p className="text-sm text-gray-500">{getStatusText()}</p>
+    <div className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 ${
+      isComplete ? 'bg-xbox-green/5 border-xbox-green/30' :
+      isFailed ? 'bg-red-500/5 border-red-500/30' :
+      isActive ? 'bg-dark-700 border-xbox-green/20' :
+      'bg-dark-700/50 border-dark-600'
+    }`}>
+      <div className={`flex-shrink-0 ${isActive ? 'animate-pulse' : ''}`}>
+        {getStatusIcon()}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={`font-medium ${isComplete ? 'text-xbox-green' : isFailed ? 'text-red-400' : 'text-white'}`}>
+          {label}
+        </p>
+        <p className="text-sm text-dark-300">{getStatusText()}</p>
       </div>
     </div>
   );
@@ -69,18 +112,33 @@ function TagBadge({ tag, category }: { tag: string; category: string }) {
   const displayName = tag.replace(`${category}_`, '').replace(/_/g, ' ');
 
   return (
-    <span className={`${categoryConfig.color} px-2 py-1 rounded-full text-xs font-medium capitalize`}>
+    <span className={`${categoryConfig.color} px-3 py-1.5 rounded-lg text-xs font-medium capitalize`}>
       {displayName}
     </span>
   );
 }
 
-function ResultView({ result, onSave }: { result: GameAnalysis; onSave: () => void }) {
+function ResultView({ result, onSave, isSaving }: { result: GameAnalysis; onSave: () => void; isSaving: boolean }) {
   // Group tags by category
   const groupedTags: Record<string, string[]> = {};
+  const nitrogenTags: Record<string, string[]> = { engagement: [], monetization: [], protagonist: [] };
 
   Object.entries(result).forEach(([key, value]) => {
     if (typeof value !== 'boolean' || !value) return;
+
+    // Check for nitrogen tags first
+    if (key.startsWith('engagement_')) {
+      nitrogenTags.engagement.push(key);
+      return;
+    }
+    if (key.startsWith('monetization_')) {
+      nitrogenTags.monetization.push(key);
+      return;
+    }
+    if (key.startsWith('protagonist_')) {
+      nitrogenTags.protagonist.push(key);
+      return;
+    }
 
     for (const category of Object.keys(TAG_CATEGORIES)) {
       if (key.startsWith(`${category}_`) || (category === 'features' && ['multiplayer', 'open_world', 'procedural', 'story_driven'].includes(key))) {
@@ -91,22 +149,24 @@ function ResultView({ result, onSave }: { result: GameAnalysis; onSave: () => vo
     }
   });
 
+  const hasNitrogenTags = nitrogenTags.engagement.length > 0 || nitrogenTags.monetization.length > 0 || nitrogenTags.protagonist.length > 0;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex items-start justify-between">
+    <div className="space-y-6 animate-in">
+      {/* Header Card */}
+      <div className="glass-card p-6">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-white">
               {result.detected_game || result.game_name}
             </h2>
-            <p className="text-lg text-gray-600 mt-1">{result.primary_genre}</p>
-            <div className="flex items-center space-x-2 mt-3">
-              <span className={`confidence-${result.confidence} px-3 py-1 rounded-full text-sm font-medium`}>
+            <p className="text-lg text-dark-200 mt-1">{result.primary_genre}</p>
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              <span className={`confidence-${result.confidence} px-3 py-1.5 rounded-lg text-sm font-medium`}>
                 {result.confidence} confidence
               </span>
               {result.sources_used?.map((source) => (
-                <span key={source} className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                <span key={source} className={`source-${source} px-2 py-1 rounded-lg text-xs font-medium`}>
                   {source}
                 </span>
               ))}
@@ -114,40 +174,92 @@ function ResultView({ result, onSave }: { result: GameAnalysis; onSave: () => vo
           </div>
           <button
             onClick={onSave}
-            className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            disabled={isSaving}
+            className="btn-xbox flex items-center gap-2 whitespace-nowrap"
           >
-            <Save className="h-4 w-4" />
-            <span>Save to History</span>
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            <span>Save to Database</span>
           </button>
         </div>
         {result.analysis_notes && (
-          <p className="mt-4 text-gray-600 bg-gray-50 p-3 rounded-lg text-sm">
-            {result.analysis_notes}
-          </p>
+          <div className="mt-6 p-4 bg-dark-700 rounded-xl border border-dark-600">
+            <div className="flex gap-2">
+              <Info className="h-4 w-4 text-dark-300 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-dark-100">{result.analysis_notes}</p>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Tags by Category */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">VGMS Tags</h3>
-        <div className="space-y-4">
-          {Object.entries(TAG_CATEGORIES).map(([category, config]) => {
-            const tags = groupedTags[category] || [];
-            if (tags.length === 0) return null;
+      {/* VGMS Tags */}
+      <div className="glass-card p-6">
+        <h3 className="text-lg font-semibold text-white mb-6">VGMS Classification Tags</h3>
+        <div className="space-y-5">
+          {Object.entries(TAG_CATEGORIES)
+            .filter(([category]) => !['engagement', 'monetization', 'protagonist'].includes(category))
+            .map(([category, config]) => {
+              const tags = groupedTags[category] || [];
+              if (tags.length === 0) return null;
 
-            return (
-              <div key={category}>
-                <p className="text-sm font-medium text-gray-500 mb-2">{config.label}</p>
+              return (
+                <div key={category}>
+                  <p className="text-sm font-medium text-dark-200 mb-3 uppercase tracking-wide">{config.label}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag) => (
+                      <TagBadge key={tag} tag={tag} category={category} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </div>
+
+      {/* Nitrogen Tags */}
+      {hasNitrogenTags && (
+        <div className="glass-card p-6 border-l-4 border-amber-500">
+          <div className="flex items-center gap-3 mb-6">
+            <Zap className="h-5 w-5 text-amber-400" />
+            <h3 className="text-lg font-semibold text-white">Nitrogen Tags</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {nitrogenTags.engagement.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-amber-300 mb-3 uppercase tracking-wide">Engagement</p>
                 <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <TagBadge key={tag} tag={tag} category={category} />
+                  {nitrogenTags.engagement.map((tag) => (
+                    <TagBadge key={tag} tag={tag} category="engagement" />
                   ))}
                 </div>
               </div>
-            );
-          })}
+            )}
+            {nitrogenTags.monetization.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-emerald-300 mb-3 uppercase tracking-wide">Monetization</p>
+                <div className="flex flex-wrap gap-2">
+                  {nitrogenTags.monetization.map((tag) => (
+                    <TagBadge key={tag} tag={tag} category="monetization" />
+                  ))}
+                </div>
+              </div>
+            )}
+            {nitrogenTags.protagonist.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-pink-300 mb-3 uppercase tracking-wide">Protagonist</p>
+                <div className="flex flex-wrap gap-2">
+                  {nitrogenTags.protagonist.map((tag) => (
+                    <TagBadge key={tag} tag={tag} category="protagonist" />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -218,72 +330,106 @@ export default function AnalyzePage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 animate-in">
       {/* Form */}
       {!jobId && (
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Analyze a Game</h2>
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="glass-card p-8">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="p-3 bg-xbox-green/10 rounded-xl border border-xbox-green/20">
+              <Gamepad2 className="h-6 w-6 text-xbox-green" />
+            </div>
             <div>
-              <label htmlFor="gameName" className="block text-sm font-medium text-gray-700 mb-2">
+              <h2 className="text-xl font-bold text-white">Add New Game</h2>
+              <p className="text-dark-300">Enter a game name to analyze and classify</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Game Name Input */}
+            <div>
+              <label htmlFor="gameName" className="block text-sm font-medium text-dark-100 mb-3">
                 Game Name
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-dark-400" />
                 <input
                   id="gameName"
                   type="text"
                   value={gameName}
                   onChange={(e) => setGameName(e.target.value)}
-                  placeholder="Enter game name (e.g., Elden Ring)"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter game name (e.g., Halo Infinite, Forza Horizon 5)"
+                  className="input-xbox pl-12 text-lg"
                 />
               </div>
             </div>
 
+            {/* Data Sources */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-dark-100 mb-3">
                 Data Sources
               </label>
-              <div className="flex flex-wrap gap-3">
-                {[
-                  { id: 'steam', label: 'Steam Store', time: '1-3s' },
-                  { id: 'xbox', label: 'Xbox Store', time: '1-3s' },
-                  { id: 'youtube', label: 'YouTube Video', time: '30-90s' },
-                ].map((source) => (
-                  <button
-                    key={source.id}
-                    type="button"
-                    onClick={() => toggleSource(source.id)}
-                    className={`px-4 py-2 rounded-lg border transition-colors ${
-                      sources.includes(source.id)
-                        ? 'bg-primary-100 border-primary-500 text-primary-700'
-                        : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="font-medium">{source.label}</span>
-                    <span className="text-xs ml-2 opacity-70">~{source.time}</span>
-                  </button>
-                ))}
+              <div className="grid gap-3">
+                {SOURCE_CONFIG.map((source) => {
+                  const isSelected = sources.includes(source.id);
+                  return (
+                    <button
+                      key={source.id}
+                      type="button"
+                      onClick={() => toggleSource(source.id)}
+                      className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 text-left ${
+                        isSelected
+                          ? 'bg-xbox-green/10 border-xbox-green/50'
+                          : 'bg-dark-700/50 border-dark-600 hover:border-dark-500'
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
+                        isSelected ? 'bg-xbox-green/20' : 'bg-dark-600'
+                      }`}>
+                        {source.icon}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`font-medium ${isSelected ? 'text-white' : 'text-dark-100'}`}>
+                          {source.label}
+                        </p>
+                        <p className="text-sm text-dark-300">{source.description}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-xs font-medium px-2 py-1 rounded ${
+                          isSelected ? 'bg-xbox-green/20 text-xbox-green' : 'bg-dark-600 text-dark-300'
+                        }`}>
+                          ~{source.time}
+                        </span>
+                        <div className={`mt-2 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          isSelected
+                            ? 'border-xbox-green bg-xbox-green'
+                            : 'border-dark-400'
+                        }`}>
+                          {isSelected && <CheckCircle className="h-3 w-3 text-white" />}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                YouTube provides the most detailed visual analysis but takes longer.
+              <p className="text-xs text-dark-400 mt-3">
+                YouTube provides the most detailed visual analysis but takes longer to process.
               </p>
             </div>
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={!gameName.trim() || sources.length === 0 || startMutation.isPending}
-              className="w-full py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+              className="btn-xbox w-full py-4 text-lg flex items-center justify-center gap-3"
             >
               {startMutation.isPending ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Starting...</span>
+                  <span>Starting Analysis...</span>
                 </>
               ) : (
                 <>
-                  <Search className="h-5 w-5" />
+                  <Gamepad2 className="h-5 w-5" />
                   <span>Analyze Game</span>
                 </>
               )}
@@ -294,12 +440,17 @@ export default function AnalyzePage() {
 
       {/* Progress */}
       {jobId && !result && (
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Analyzing: {gameName}
-            </h2>
-            <span className={`px-2 py-1 rounded text-xs ${isConnected ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+        <div className="glass-card p-8">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-xl font-bold text-white">
+                Analyzing: {gameName}
+              </h2>
+              <p className="text-dark-300 mt-1">Please wait while we gather and process game data</p>
+            </div>
+            <span className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+              isConnected ? 'bg-xbox-green/20 text-xbox-green border border-xbox-green/30' : 'bg-dark-600 text-dark-300'
+            }`}>
               {isConnected ? 'Connected' : 'Connecting...'}
             </span>
           </div>
@@ -314,27 +465,38 @@ export default function AnalyzePage() {
             {sources.includes('youtube') && (
               <ProgressStep label="YouTube Video" status={progress.youtube || 'pending'} />
             )}
-            <ProgressStep label="Claude Analysis" status={progress.analysis || 'pending'} />
+            <ProgressStep label="AI Classification" status={progress.analysis || 'pending'} />
           </div>
 
-          <p className="text-sm text-gray-500 mt-4 text-center">
-            This may take up to 2 minutes if YouTube is enabled...
-          </p>
+          <div className="mt-8 p-4 bg-dark-700/50 rounded-xl border border-dark-600 text-center">
+            <p className="text-sm text-dark-300">
+              This may take up to 2 minutes if YouTube analysis is enabled.
+            </p>
+          </div>
         </div>
       )}
 
       {/* Result */}
       {result && (
         <>
-          <ResultView result={result} onSave={() => saveMutation.mutate()} />
+          <ResultView
+            result={result}
+            onSave={() => saveMutation.mutate()}
+            isSaving={saveMutation.isPending}
+          />
+
           {saved && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-700 text-center">
-              Result saved to history!
+            <div className="glass-card p-4 border-l-4 border-xbox-green">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-xbox-green" />
+                <p className="text-white font-medium">Game saved to database successfully!</p>
+              </div>
             </div>
           )}
+
           <button
             onClick={handleReset}
-            className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            className="btn-secondary w-full py-4 text-lg"
           >
             Analyze Another Game
           </button>
