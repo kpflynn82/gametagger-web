@@ -1,6 +1,8 @@
 // API client for GameTagger backend
 
-const API_BASE = '/api';
+// In development, Vite proxies /api to localhost:8000
+// In production, set VITE_API_URL to the deployed backend URL
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 export interface TagRequest {
   game_name: string;
