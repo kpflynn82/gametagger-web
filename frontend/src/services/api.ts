@@ -50,6 +50,10 @@ export interface AnalysisSummary {
   sources_used: string[];
   created_at: string;
   tag_count: number;
+  // Nitrogen tag counts
+  engagement_count: number;
+  monetization_count: number;
+  protagonist_count: number;
 }
 
 export interface HistoryResponse {

@@ -81,6 +81,22 @@ export default function Dashboard() {
     count: t.count,
   }));
 
+  // Prepare nitrogen tags for charts
+  const engagementTags = (stats.tag_distribution.engagement || []).slice(0, 8).map((t) => ({
+    name: t.tag_name.replace('engagement_', '').replace(/_/g, ' '),
+    count: t.count,
+  }));
+
+  const monetizationTags = (stats.tag_distribution.monetization || []).slice(0, 4).map((t) => ({
+    name: t.tag_name.replace('monetization_', '').replace(/_/g, ' '),
+    count: t.count,
+  }));
+
+  const protagonistTags = (stats.tag_distribution.protagonist || []).slice(0, 4).map((t) => ({
+    name: t.tag_name.replace('protagonist_', '').replace(/_/g, ' '),
+    count: t.count,
+  }));
+
   return (
     <div className="space-y-8">
       {/* Stats Cards */}
@@ -166,6 +182,71 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Nitrogen Tags Section */}
+      {(engagementTags.length > 0 || monetizationTags.length > 0 || protagonistTags.length > 0) && (
+        <>
+          <h2 className="text-xl font-bold text-gray-900">Nitrogen Tags</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Engagement Tags */}
+            <div className="bg-white rounded-xl shadow-sm border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Engagement</h3>
+              {engagementTags.length > 0 ? (
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={engagementTags} layout="vertical">
+                      <XAxis type="number" />
+                      <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-gray-400 text-sm text-center py-8">No engagement data yet</p>
+              )}
+            </div>
+
+            {/* Monetization Tags */}
+            <div className="bg-white rounded-xl shadow-sm border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Monetization</h3>
+              {monetizationTags.length > 0 ? (
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monetizationTags} layout="vertical">
+                      <XAxis type="number" />
+                      <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#10b981" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-gray-400 text-sm text-center py-8">No monetization data yet</p>
+              )}
+            </div>
+
+            {/* Protagonist Tags */}
+            <div className="bg-white rounded-xl shadow-sm border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Protagonist</h3>
+              {protagonistTags.length > 0 ? (
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={protagonistTags} layout="vertical">
+                      <XAxis type="number" />
+                      <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#ec4899" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-gray-400 text-sm text-center py-8">No protagonist data yet</p>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Recent Analyses */}
       <div className="bg-white rounded-xl shadow-sm border p-6">

@@ -57,6 +57,10 @@ class AnalysisSummary(BaseModel):
     sources_used: list[str]
     created_at: datetime
     tag_count: int
+    # Nitrogen tag counts
+    engagement_count: int = 0
+    monetization_count: int = 0
+    protagonist_count: int = 0
 
 
 class AnalysisDetail(BaseModel):

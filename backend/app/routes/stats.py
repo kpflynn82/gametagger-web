@@ -46,6 +46,19 @@ TAG_CATEGORIES = {
     ],
     'features': [
         'multiplayer', 'open_world', 'procedural', 'story_driven'
+    ],
+    'engagement': [
+        'engagement_gacha', 'engagement_daily_rewards', 'engagement_energy_system',
+        'engagement_pvp', 'engagement_guild', 'engagement_events',
+        'engagement_battle_pass', 'engagement_auto_play'
+    ],
+    'monetization': [
+        'monetization_free_to_play', 'monetization_premium',
+        'monetization_subscription', 'monetization_iap'
+    ],
+    'protagonist': [
+        'protagonist_customizable', 'protagonist_predefined',
+        'protagonist_ensemble', 'protagonist_non_human'
     ]
 }
 
@@ -150,7 +163,13 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
 
     recent_items = []
     for analysis in recent_analyses:
-        tag_count = sum(1 for v in (analysis.tags or {}).values() if v is True)
+        tags = analysis.tags or {}
+        tag_count = sum(1 for v in tags.values() if v is True)
+        # Count nitrogen tags
+        engagement_count = sum(1 for k, v in tags.items() if k.startswith('engagement_') and v is True)
+        monetization_count = sum(1 for k, v in tags.items() if k.startswith('monetization_') and v is True)
+        protagonist_count = sum(1 for k, v in tags.items() if k.startswith('protagonist_') and v is True)
+
         recent_items.append(AnalysisSummary(
             id=analysis.id,
             game_name=analysis.game_name,
@@ -159,7 +178,10 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
             primary_genre=analysis.primary_genre,
             sources_used=analysis.sources_used or [],
             created_at=analysis.created_at,
-            tag_count=tag_count
+            tag_count=tag_count,
+            engagement_count=engagement_count,
+            monetization_count=monetization_count,
+            protagonist_count=protagonist_count
         ))
 
     return StatsResponse(

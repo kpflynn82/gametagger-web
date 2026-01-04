@@ -78,8 +78,14 @@ async def get_history(
     # Convert to response
     items = []
     for analysis in analyses:
+        tags = analysis.tags or {}
         # Count true tags
-        tag_count = sum(1 for v in (analysis.tags or {}).values() if v is True)
+        tag_count = sum(1 for v in tags.values() if v is True)
+
+        # Count nitrogen tags
+        engagement_count = sum(1 for k, v in tags.items() if k.startswith('engagement_') and v is True)
+        monetization_count = sum(1 for k, v in tags.items() if k.startswith('monetization_') and v is True)
+        protagonist_count = sum(1 for k, v in tags.items() if k.startswith('protagonist_') and v is True)
 
         items.append(AnalysisSummary(
             id=analysis.id,
@@ -89,7 +95,10 @@ async def get_history(
             primary_genre=analysis.primary_genre,
             sources_used=analysis.sources_used or [],
             created_at=analysis.created_at,
-            tag_count=tag_count
+            tag_count=tag_count,
+            engagement_count=engagement_count,
+            monetization_count=monetization_count,
+            protagonist_count=protagonist_count
         ))
 
     pages = (total + limit - 1) // limit if total > 0 else 1

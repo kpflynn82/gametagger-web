@@ -52,6 +52,17 @@ VGMS_CATEGORIES = {
     ],
     'features': [
         'multiplayer', 'open_world', 'procedural', 'story_driven'
+    ],
+    # Nitrogen-specific categories
+    'engagement': [
+        'gacha', 'daily_rewards', 'energy_system', 'pvp', 'guild',
+        'events', 'battle_pass', 'auto_play'
+    ],
+    'monetization': [
+        'free_to_play', 'premium', 'subscription', 'iap'
+    ],
+    'protagonist': [
+        'customizable', 'predefined', 'ensemble', 'non_human'
     ]
 }
 
@@ -71,6 +82,9 @@ Based on all available information, return a JSON object with:
    - mechanic_leveling, mechanic_crafting, mechanic_building, etc.
    - visual_realistic, visual_stylized, visual_pixel_art, etc.
    - multiplayer, open_world, procedural, story_driven
+   - engagement_gacha, engagement_daily_rewards, engagement_energy_system, engagement_pvp, engagement_guild, engagement_events, engagement_battle_pass, engagement_auto_play
+   - monetization_free_to_play, monetization_premium, monetization_subscription, monetization_iap
+   - protagonist_customizable, protagonist_predefined, protagonist_ensemble, protagonist_non_human
 
 2. Metadata:
    - detected_game: The game name you identified
