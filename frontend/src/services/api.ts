@@ -159,3 +159,15 @@ export async function deleteAnalysis(id: number): Promise<void> {
     throw new Error(`Failed to delete analysis: ${response.statusText}`);
   }
 }
+
+export interface PopularGamesResponse {
+  items: AnalysisSummary[];
+}
+
+export async function getPopularGames(limit: number = 10): Promise<PopularGamesResponse> {
+  const response = await fetch(`${API_BASE}/popular-games?limit=${limit}`);
+  if (!response.ok) {
+    throw new Error(`Failed to get popular games: ${response.statusText}`);
+  }
+  return response.json();
+}

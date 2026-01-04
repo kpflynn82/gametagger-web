@@ -193,3 +193,40 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
         top_genres=top_genres,
         recent_analyses=recent_items
     )
+
+
+@router.get("/popular-games")
+async def get_popular_games(db: AsyncSession = Depends(get_db), limit: int = 10):
+    """Get popular games (most tagged games in our database)."""
+    # Get all analyses
+    query = select(Analysis)
+    result = await db.execute(query)
+    all_analyses = result.scalars().all()
+
+    # Calculate tag count for each and sort
+    games_with_counts = []
+    for analysis in all_analyses:
+        tags = analysis.tags or {}
+        tag_count = sum(1 for v in tags.values() if v is True)
+        engagement_count = sum(1 for k, v in tags.items() if k.startswith('engagement_') and v is True)
+        monetization_count = sum(1 for k, v in tags.items() if k.startswith('monetization_') and v is True)
+        protagonist_count = sum(1 for k, v in tags.items() if k.startswith('protagonist_') and v is True)
+
+        games_with_counts.append({
+            "id": analysis.id,
+            "game_name": analysis.game_name,
+            "detected_game": analysis.detected_game,
+            "confidence": analysis.confidence,
+            "primary_genre": analysis.primary_genre,
+            "sources_used": analysis.sources_used or [],
+            "created_at": analysis.created_at.isoformat() if analysis.created_at else None,
+            "tag_count": tag_count,
+            "engagement_count": engagement_count,
+            "monetization_count": monetization_count,
+            "protagonist_count": protagonist_count
+        })
+
+    # Sort by tag count descending
+    games_with_counts.sort(key=lambda x: x["tag_count"], reverse=True)
+
+    return {"items": games_with_counts[:limit]}

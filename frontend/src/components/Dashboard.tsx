@@ -1,9 +1,127 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Clock, Target, Gamepad2 } from 'lucide-react';
-import { getStats, type StatsResponse } from '../services/api';
+import { TrendingUp, Clock, Target, Gamepad2, Trophy, X } from 'lucide-react';
+import { getStats, getPopularGames, getAnalysis, type StatsResponse, type PopularGamesResponse } from '../services/api';
 
 const COLORS = ['#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
+
+// Tag category configuration
+const TAG_CATEGORIES: Record<string, { label: string; color: string; prefix: string }> = {
+  gameplay: { label: 'Gameplay', color: 'bg-purple-100 text-purple-700', prefix: 'gameplay_' },
+  narrative: { label: 'Narrative', color: 'bg-blue-100 text-blue-700', prefix: 'narrative_' },
+  theme: { label: 'Theme', color: 'bg-indigo-100 text-indigo-700', prefix: 'theme_' },
+  setting: { label: 'Setting', color: 'bg-cyan-100 text-cyan-700', prefix: 'setting_' },
+  mechanic: { label: 'Mechanic', color: 'bg-teal-100 text-teal-700', prefix: 'mechanic_' },
+  visual: { label: 'Visual', color: 'bg-violet-100 text-violet-700', prefix: 'visual_' },
+  features: { label: 'Features', color: 'bg-gray-100 text-gray-700', prefix: '' },
+  engagement: { label: 'Engagement', color: 'bg-amber-100 text-amber-700', prefix: 'engagement_' },
+  monetization: { label: 'Monetization', color: 'bg-emerald-100 text-emerald-700', prefix: 'monetization_' },
+  protagonist: { label: 'Protagonist', color: 'bg-pink-100 text-pink-700', prefix: 'protagonist_' },
+};
+
+const FEATURE_TAGS = ['multiplayer', 'open_world', 'procedural', 'story_driven'];
+
+function GameDetailModal({ gameId, onClose }: { gameId: number; onClose: () => void }) {
+  const { data: analysis, isLoading, error } = useQuery({
+    queryKey: ['analysis', gameId],
+    queryFn: () => getAnalysis(gameId),
+  });
+
+  // Group tags by category
+  const groupedTags: Record<string, string[]> = {};
+  if (analysis?.tags) {
+    Object.entries(analysis.tags).forEach(([tag, value]) => {
+      if (value !== true) return;
+
+      let foundCategory = 'features';
+      for (const [cat, config] of Object.entries(TAG_CATEGORIES)) {
+        if (config.prefix && tag.startsWith(config.prefix)) {
+          foundCategory = cat;
+          break;
+        }
+      }
+      if (FEATURE_TAGS.includes(tag)) {
+        foundCategory = 'features';
+      }
+
+      if (!groupedTags[foundCategory]) {
+        groupedTags[foundCategory] = [];
+      }
+      const displayName = TAG_CATEGORIES[foundCategory].prefix
+        ? tag.replace(TAG_CATEGORIES[foundCategory].prefix, '').replace(/_/g, ' ')
+        : tag.replace(/_/g, ' ');
+      groupedTags[foundCategory].push(displayName);
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">
+              {analysis?.detected_game || analysis?.game_name || 'Loading...'}
+            </h2>
+            {analysis?.primary_genre && (
+              <p className="text-sm text-gray-500">{analysis.primary_genre}</p>
+            )}
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="p-4 overflow-y-auto max-h-[60vh]">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+          ) : error ? (
+            <div className="text-red-600 text-center py-8">Failed to load analysis</div>
+          ) : (
+            <div className="space-y-4">
+              {analysis?.analysis_notes && (
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-sm text-gray-600">{analysis.analysis_notes}</p>
+                </div>
+              )}
+
+              {Object.entries(TAG_CATEGORIES).map(([category, config]) => {
+                const tags = groupedTags[category];
+                if (!tags || tags.length === 0) return null;
+
+                return (
+                  <div key={category}>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">{config.label}</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {tags.map((tag) => (
+                        <span key={tag} className={`${config.color} px-2 py-1 rounded-full text-xs font-medium capitalize`}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {Object.keys(groupedTags).length === 0 && (
+                <p className="text-gray-500 text-center py-4">No tags found</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t bg-gray-50">
+          <div className="flex items-center justify-between text-sm text-gray-500">
+            <span>Sources: {analysis?.sources_used?.join(', ') || '-'}</span>
+            <span>Confidence: {analysis?.confidence || '-'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StatCard({ title, value, icon: Icon, subtitle }: {
   title: string;
@@ -28,10 +146,17 @@ function StatCard({ title, value, icon: Icon, subtitle }: {
 }
 
 export default function Dashboard() {
+  const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+
   const { data: stats, isLoading, error } = useQuery<StatsResponse>({
     queryKey: ['stats'],
     queryFn: getStats,
     refetchInterval: 30000,
+  });
+
+  const { data: popularGames } = useQuery<PopularGamesResponse>({
+    queryKey: ['popular-games'],
+    queryFn: () => getPopularGames(10),
   });
 
   if (isLoading) {
@@ -235,6 +360,36 @@ export default function Dashboard() {
         </>
       )}
 
+      {/* Popular Games */}
+      {popularGames && popularGames.items.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <Trophy className="h-5 w-5 text-yellow-500" />
+            <h3 className="text-lg font-semibold text-gray-900">Most Tagged Games</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {popularGames.items.slice(0, 10).map((game, index) => (
+              <div
+                key={game.id}
+                onClick={() => setSelectedGameId(game.id)}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <span className="text-lg font-bold text-gray-400 w-6">#{index + 1}</span>
+                  <div>
+                    <p className="font-medium text-gray-900">{game.detected_game || game.game_name}</p>
+                    <p className="text-xs text-gray-500">{game.primary_genre}</p>
+                  </div>
+                </div>
+                <span className="bg-primary-100 text-primary-700 px-2 py-1 rounded-full text-xs font-medium">
+                  {game.tag_count} tags
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Recent Analyses */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Analyses</h3>
@@ -245,7 +400,8 @@ export default function Dashboard() {
             {stats.recent_analyses.map((analysis) => (
               <div
                 key={analysis.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                onClick={() => setSelectedGameId(analysis.id)}
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
               >
                 <div>
                   <p className="font-medium text-gray-900">{analysis.detected_game || analysis.game_name}</p>
@@ -266,6 +422,14 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Game Detail Modal */}
+      {selectedGameId && (
+        <GameDetailModal
+          gameId={selectedGameId}
+          onClose={() => setSelectedGameId(null)}
+        />
+      )}
     </div>
   );
 }
