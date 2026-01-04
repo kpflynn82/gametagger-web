@@ -55,11 +55,10 @@ async def import_nitrogen_data():
     print(f"Found {len(rows)} games in nitrogen dataset")
 
     async with async_session_maker() as session:
-        # Check existing nitrogen imports
-        existing_query = select(Analysis).where(Analysis.sources_used.contains(["nitrogen"]))
+        # Check existing games by name (simpler, works with both SQLite and PostgreSQL)
+        existing_query = select(Analysis.game_name)
         existing_result = await session.execute(existing_query)
-        existing = existing_result.scalars().all()
-        existing_names = {a.game_name.lower() for a in existing}
+        existing_names = {name.lower() for (name,) in existing_result.all()}
 
         imported = 0
         skipped = 0
