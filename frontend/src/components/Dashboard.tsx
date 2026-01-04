@@ -27,19 +27,6 @@ function StatCard({ title, value, icon: Icon, subtitle }: {
   );
 }
 
-function ConfidenceBadge({ confidence }: { confidence: number }) {
-  const percentage = Math.round(confidence * 100);
-  let colorClass = 'bg-green-100 text-green-800';
-  if (percentage < 70) colorClass = 'bg-yellow-100 text-yellow-800';
-  if (percentage < 50) colorClass = 'bg-red-100 text-red-800';
-
-  return (
-    <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
-      {percentage}% avg confidence
-    </span>
-  );
-}
-
 export default function Dashboard() {
   const { data: stats, isLoading, error } = useQuery<StatsResponse>({
     queryKey: ['stats'],

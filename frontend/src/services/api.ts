@@ -1,7 +1,8 @@
 // API client for GameTagger backend
 
 // Use Railway backend in production, local proxy in development
-const API_BASE = import.meta.env.DEV
+const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+const API_BASE = isLocalhost
   ? '/api'
   : 'https://gametagger-web-production.up.railway.app/api';
 
@@ -158,4 +159,3 @@ export async function deleteAnalysis(id: number): Promise<void> {
     throw new Error(`Failed to delete analysis: ${response.statusText}`);
   }
 }
-// trigger deploy
