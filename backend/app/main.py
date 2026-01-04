@@ -67,7 +67,8 @@ app.include_router(stats.router)
 app.include_router(websocket.router)
 
 
-# Health check endpoint
+# Health check endpoints
+@app.get("/health")
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""

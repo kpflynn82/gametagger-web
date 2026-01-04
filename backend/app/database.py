@@ -5,9 +5,9 @@ from app.config import get_settings
 
 settings = get_settings()
 
-# Create async engine
+# Create async engine - use the async-compatible URL
 engine = create_async_engine(
-    settings.database_url,
+    settings.get_async_database_url(),
     echo=False,
     future=True
 )
