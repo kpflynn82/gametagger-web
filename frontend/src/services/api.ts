@@ -158,3 +158,4 @@ export async function deleteAnalysis(id: number): Promise<void> {
     throw new Error(`Failed to delete analysis: ${response.statusText}`);
   }
 }
+// trigger deploy
