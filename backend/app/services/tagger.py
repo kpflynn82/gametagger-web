@@ -403,51 +403,72 @@ class AsyncYouTubeSource:
         return frames
 
     async def fetch(self, game_name: str, progress_callback: Callable = None) -> dict:
-        """Fetch YouTube gameplay data."""
+        """Fetch YouTube gameplay data with timeout protection."""
         if not self.available:
             return {'source': 'youtube', 'success': False, 'error': 'yt-dlp or opencv not installed'}
 
+        # Skip YouTube on Railway/production (it's slow and often fails)
+        if os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('SKIP_YOUTUBE'):
+            return {'source': 'youtube', 'success': False, 'error': 'YouTube disabled in production'}
+
         loop = asyncio.get_event_loop()
 
-        if progress_callback:
-            await progress_callback('youtube', 'searching')
-
-        # Search in thread pool
-        video = await loop.run_in_executor(None, self._search_video_sync, game_name)
-        if not video.get('success'):
-            return {'source': 'youtube', 'success': False, 'error': video.get('error')}
-
-        if progress_callback:
-            await progress_callback('youtube', 'downloading')
-
-        # Download in thread pool
-        video_path = await loop.run_in_executor(None, self._download_video_sync, video['url'])
-        if not video_path:
-            return {'source': 'youtube', 'success': False, 'error': 'Download failed'}
-
-        if progress_callback:
-            await progress_callback('youtube', 'extracting')
-
-        # Extract frames in thread pool
-        frames = await loop.run_in_executor(None, self._extract_frames_sync, video_path)
-
-        # Cleanup
         try:
-            os.remove(video_path)
-        except Exception:
-            pass
+            if progress_callback:
+                await progress_callback('youtube', 'searching')
 
-        if progress_callback:
-            await progress_callback('youtube', 'completed')
+            # Search with timeout (30 seconds)
+            video = await asyncio.wait_for(
+                loop.run_in_executor(None, self._search_video_sync, game_name),
+                timeout=30
+            )
+            if not video.get('success'):
+                return {'source': 'youtube', 'success': False, 'error': video.get('error')}
 
-        return {
-            'source': 'youtube',
-            'success': True,
-            'video_title': video['title'],
-            'video_url': video['url'],
-            'frames': frames,
-            'frame_count': len(frames)
-        }
+            if progress_callback:
+                await progress_callback('youtube', 'downloading')
+
+            # Download with timeout (120 seconds)
+            video_path = await asyncio.wait_for(
+                loop.run_in_executor(None, self._download_video_sync, video['url']),
+                timeout=120
+            )
+            if not video_path:
+                return {'source': 'youtube', 'success': False, 'error': 'Download failed'}
+
+            if progress_callback:
+                await progress_callback('youtube', 'extracting')
+
+            # Extract frames with timeout (60 seconds)
+            frames = await asyncio.wait_for(
+                loop.run_in_executor(None, self._extract_frames_sync, video_path),
+                timeout=60
+            )
+
+            # Cleanup
+            try:
+                os.remove(video_path)
+            except Exception:
+                pass
+
+            if progress_callback:
+                await progress_callback('youtube', 'completed')
+
+            return {
+                'source': 'youtube',
+                'success': True,
+                'video_title': video['title'],
+                'video_url': video['url'],
+                'frames': frames,
+                'frame_count': len(frames)
+            }
+
+        except asyncio.TimeoutError:
+            if progress_callback:
+                await progress_callback('youtube', 'timeout')
+            return {'source': 'youtube', 'success': False, 'error': 'YouTube fetch timed out'}
+        except Exception as e:
+            return {'source': 'youtube', 'success': False, 'error': f'YouTube error: {str(e)}'}
 
 
 class AsyncGameTagger:
@@ -504,22 +525,27 @@ class AsyncGameTagger:
         prompt = ANALYSIS_PROMPT.format(game_name=game_name, context=context_text)
         content.insert(0, {"type": "text", "text": prompt})
 
-        # Run Claude API call in thread pool (it's sync)
+        # Run Claude API call in thread pool (it's sync) with timeout
         loop = asyncio.get_event_loop()
         try:
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.client.messages.create(
-                    model="claude-sonnet-4-20250514",
-                    max_tokens=2000,
-                    messages=[{"role": "user", "content": content}]
-                )
+            response = await asyncio.wait_for(
+                loop.run_in_executor(
+                    None,
+                    lambda: self.client.messages.create(
+                        model="claude-sonnet-4-20250514",
+                        max_tokens=2000,
+                        messages=[{"role": "user", "content": content}]
+                    )
+                ),
+                timeout=120  # 2 minute timeout for Claude API
             )
 
             response_text = response.content[0].text
             json_match = re.search(r'\{[\s\S]*\}', response_text)
             if json_match:
                 return json.loads(json_match.group())
+        except asyncio.TimeoutError:
+            return {'error': 'Claude API timed out after 120 seconds'}
         except Exception as e:
             return {'error': f'Analysis failed: {str(e)}'}
 
@@ -531,20 +557,42 @@ class AsyncGameTagger:
         sources: list = None,
         progress_callback: Callable = None
     ) -> dict:
-        """Tag a game using specified sources."""
+        """Tag a game using specified sources with timeout protection."""
+        try:
+            return await asyncio.wait_for(
+                self._tag_game_impl(game_name, sources, progress_callback),
+                timeout=300  # 5 minute master timeout
+            )
+        except asyncio.TimeoutError:
+            return {'game_name': game_name, 'error': 'Overall tagging process timed out after 5 minutes'}
+        except Exception as e:
+            return {'game_name': game_name, 'error': f'Unexpected error: {str(e)}'}
+
+    async def _tag_game_impl(
+        self,
+        game_name: str,
+        sources: list = None,
+        progress_callback: Callable = None
+    ) -> dict:
+        """Internal implementation of tag_game."""
         if sources is None:
             sources = ['steam', 'xbox', 'youtube']
 
         source_data = []
 
-        # Fetch Steam and Xbox concurrently (they're fast)
-        # YouTube separately (it's slow)
+        # Fetch Steam and Xbox concurrently with timeout (they're fast)
         tasks = []
 
         if 'steam' in sources:
-            tasks.append(self.steam.fetch(game_name, progress_callback))
+            tasks.append(asyncio.wait_for(
+                self.steam.fetch(game_name, progress_callback),
+                timeout=30
+            ))
         if 'xbox' in sources:
-            tasks.append(self.xbox.fetch(game_name, progress_callback))
+            tasks.append(asyncio.wait_for(
+                self.xbox.fetch(game_name, progress_callback),
+                timeout=30
+            ))
 
         # Run fast sources concurrently
         if tasks:
@@ -552,17 +600,31 @@ class AsyncGameTagger:
             for r in results:
                 if isinstance(r, dict):
                     source_data.append(r)
+                elif isinstance(r, asyncio.TimeoutError):
+                    source_data.append({'source': 'unknown', 'success': False, 'error': 'Timeout'})
 
-        # YouTube separately (slow)
+        # YouTube separately (slow, has its own timeouts)
         if 'youtube' in sources:
-            yt_result = await self.youtube.fetch(game_name, progress_callback)
-            source_data.append(yt_result)
+            try:
+                yt_result = await self.youtube.fetch(game_name, progress_callback)
+                source_data.append(yt_result)
+            except Exception as e:
+                source_data.append({'source': 'youtube', 'success': False, 'error': str(e)})
 
         # Check what we got
         successful = [s for s in source_data if s.get('success')]
 
         if not successful:
-            return {'game_name': game_name, 'error': 'No sources available'}
+            # Try to proceed with just Claude's knowledge if no sources work
+            if progress_callback:
+                await progress_callback('analysis', 'processing (no external sources)')
+            result = await self.analyze_with_claude(game_name, [])
+            result['game_name'] = game_name
+            result['sources_used'] = ['claude_only']
+            result['source_data'] = {}
+            if progress_callback:
+                await progress_callback('analysis', 'completed')
+            return result
 
         # Analyze with Claude
         if progress_callback:
