@@ -528,6 +528,10 @@ class AsyncGameTagger:
         # Run Claude API call in thread pool (it's sync) with timeout
         loop = asyncio.get_event_loop()
         try:
+            # Check if API key is set
+            if not self.client.api_key:
+                return {'error': 'ANTHROPIC_API_KEY not configured - please set in environment variables'}
+
             response = await asyncio.wait_for(
                 loop.run_in_executor(
                     None,
@@ -546,8 +550,14 @@ class AsyncGameTagger:
                 return json.loads(json_match.group())
         except asyncio.TimeoutError:
             return {'error': 'Claude API timed out after 120 seconds'}
+        except anthropic.APIConnectionError as e:
+            return {'error': f'Cannot connect to Anthropic API: {str(e)}'}
+        except anthropic.AuthenticationError as e:
+            return {'error': f'Invalid API key: {str(e)}'}
+        except anthropic.RateLimitError as e:
+            return {'error': f'Rate limited: {str(e)}'}
         except Exception as e:
-            return {'error': f'Analysis failed: {str(e)}'}
+            return {'error': f'Analysis failed ({type(e).__name__}): {str(e)}'}
 
         return {'error': 'Could not parse response'}
 
