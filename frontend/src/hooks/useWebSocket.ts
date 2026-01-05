@@ -14,8 +14,13 @@ export function useWebSocket(jobId: string | null) {
   const connect = useCallback(() => {
     if (!jobId) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/job/${jobId}`;
+    // Use Railway backend for WebSocket, local proxy in development
+    const isLocalhost = window.location.hostname === 'localhost';
+    const wsHost = isLocalhost
+      ? window.location.host
+      : 'gametagger-web-production.up.railway.app';
+    const protocol = isLocalhost ? 'ws:' : 'wss:';
+    const wsUrl = `${protocol}//${wsHost}/ws/job/${jobId}`;
 
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
