@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
-import { TrendingUp, Clock, Target, Gamepad2, Trophy, X, ArrowUpRight, Zap } from 'lucide-react';
+import { TrendingUp, Clock, Target, Gamepad2, Trophy, X, ArrowUpRight, Zap, ExternalLink } from 'lucide-react';
 import { getStats, getPopularGames, getAnalysis, type StatsResponse, type PopularGamesResponse } from '../services/api';
+import XboxStoreMockup from './XboxStoreMockup';
 
 const CHART_COLORS = ['#107C10', '#52B043', '#10b981', '#22c55e', '#4ade80', '#86efac'];
 
@@ -35,7 +36,7 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
   return null;
 };
 
-function GameDetailModal({ gameId, onClose }: { gameId: number; onClose: () => void }) {
+function GameDetailModal({ gameId, onClose, onOpenXboxMockup }: { gameId: number; onClose: () => void; onOpenXboxMockup: () => void }) {
   const { data: analysis, isLoading, error } = useQuery({
     queryKey: ['analysis', gameId],
     queryFn: () => getAnalysis(gameId),
@@ -80,9 +81,18 @@ function GameDetailModal({ gameId, onClose }: { gameId: number; onClose: () => v
               <p className="text-sm text-dark-200 mt-1">{analysis.primary_genre}</p>
             )}
           </div>
-          <button onClick={onClose} className="p-2 text-dark-300 hover:text-white transition-colors rounded-lg hover:bg-dark-600">
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onOpenXboxMockup}
+              className="flex items-center gap-2 px-4 py-2 bg-xbox-green/10 text-xbox-green border border-xbox-green/30 rounded-lg hover:bg-xbox-green/20 transition-colors text-sm font-medium"
+            >
+              <ExternalLink className="h-4 w-4" />
+              View Xbox Mockup
+            </button>
+            <button onClick={onClose} className="p-2 text-dark-300 hover:text-white transition-colors rounded-lg hover:bg-dark-600">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[60vh]">
@@ -173,6 +183,7 @@ function StatCard({ title, value, icon: Icon, subtitle, trend }: {
 
 export default function Dashboard() {
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+  const [xboxMockupGameId, setXboxMockupGameId] = useState<number | null>(null);
 
   const { data: stats, isLoading, error } = useQuery<StatsResponse>({
     queryKey: ['stats'],
@@ -440,9 +451,21 @@ export default function Dashboard() {
                     <p className="text-xs text-dark-300">{game.primary_genre}</p>
                   </div>
                 </div>
-                <span className="bg-xbox-green/10 text-xbox-green border border-xbox-green/20 px-3 py-1 rounded-lg text-sm font-medium">
-                  {game.tag_count} tags
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setXboxMockupGameId(game.id);
+                    }}
+                    className="p-2 text-xbox-green/60 hover:text-xbox-green transition-colors rounded-lg hover:bg-xbox-green/10"
+                    title="View Xbox Store Mockup"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </button>
+                  <span className="bg-xbox-green/10 text-xbox-green border border-xbox-green/20 px-3 py-1 rounded-lg text-sm font-medium">
+                    {game.tag_count} tags
+                  </span>
+                </div>
               </div>
             ))}
           </div>
@@ -472,6 +495,16 @@ export default function Dashboard() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setXboxMockupGameId(analysis.id);
+                    }}
+                    className="p-2 text-xbox-green/60 hover:text-xbox-green transition-colors rounded-lg hover:bg-xbox-green/10"
+                    title="View Xbox Store Mockup"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </button>
                   <span className={`confidence-${analysis.confidence} px-2 py-1 rounded-lg text-xs font-medium`}>
                     {analysis.confidence}
                   </span>
@@ -490,6 +523,18 @@ export default function Dashboard() {
         <GameDetailModal
           gameId={selectedGameId}
           onClose={() => setSelectedGameId(null)}
+          onOpenXboxMockup={() => {
+            setXboxMockupGameId(selectedGameId);
+            setSelectedGameId(null);
+          }}
+        />
+      )}
+
+      {/* Xbox Store Mockup */}
+      {xboxMockupGameId && (
+        <XboxStoreMockup
+          gameId={xboxMockupGameId}
+          onClose={() => setXboxMockupGameId(null)}
         />
       )}
     </div>

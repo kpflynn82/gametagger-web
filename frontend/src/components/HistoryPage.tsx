@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Trash2, ChevronLeft, ChevronRight, Download, X, Filter, Gamepad2 } from 'lucide-react';
+import { Search, Trash2, ChevronLeft, ChevronRight, Download, X, Filter, Gamepad2, ExternalLink } from 'lucide-react';
 import { getHistory, deleteAnalysis, getAnalysis, type HistoryResponse, type AnalysisSummary } from '../services/api';
+import XboxStoreMockup from './XboxStoreMockup';
 
 // Tag category configuration
 const TAG_CATEGORIES: Record<string, { label: string; color: string; prefix: string }> = {
@@ -19,7 +20,7 @@ const TAG_CATEGORIES: Record<string, { label: string; color: string; prefix: str
 
 const FEATURE_TAGS = ['multiplayer', 'open_world', 'procedural', 'story_driven'];
 
-function GameDetailModal({ gameId, onClose }: { gameId: number; onClose: () => void }) {
+function GameDetailModal({ gameId, onClose, onOpenXboxMockup }: { gameId: number; onClose: () => void; onOpenXboxMockup: () => void }) {
   const { data: analysis, isLoading, error } = useQuery({
     queryKey: ['analysis', gameId],
     queryFn: () => getAnalysis(gameId),
@@ -67,12 +68,21 @@ function GameDetailModal({ gameId, onClose }: { gameId: number; onClose: () => v
               <p className="text-sm text-dark-200 mt-1">{analysis.primary_genre}</p>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-dark-300 hover:text-white transition-colors rounded-lg hover:bg-dark-600"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onOpenXboxMockup}
+              className="flex items-center gap-2 px-4 py-2 bg-xbox-green/10 text-xbox-green border border-xbox-green/30 rounded-lg hover:bg-xbox-green/20 transition-colors text-sm font-medium"
+            >
+              <ExternalLink className="h-4 w-4" />
+              View Xbox Mockup
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 text-dark-300 hover:text-white transition-colors rounded-lg hover:bg-dark-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -197,6 +207,7 @@ export default function HistoryPage() {
   const [confidence, setConfidence] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+  const [xboxMockupGameId, setXboxMockupGameId] = useState<number | null>(null);
 
   // Debounce search
   const handleSearchChange = (value: string) => {
@@ -397,17 +408,29 @@ export default function HistoryPage() {
                         {new Date(item.created_at).toLocaleDateString()}
                       </td>
                       <td className="text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm('Delete this analysis?')) {
-                              deleteMutation.mutate(item.id);
-                            }
-                          }}
-                          className="p-2 text-dark-400 hover:text-red-400 transition-colors rounded-lg hover:bg-dark-600"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setXboxMockupGameId(item.id);
+                            }}
+                            className="p-2 text-xbox-green/70 hover:text-xbox-green transition-colors rounded-lg hover:bg-xbox-green/10"
+                            title="View Xbox Store Mockup"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('Delete this analysis?')) {
+                                deleteMutation.mutate(item.id);
+                              }
+                            }}
+                            className="p-2 text-dark-400 hover:text-red-400 transition-colors rounded-lg hover:bg-dark-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -430,7 +453,19 @@ export default function HistoryPage() {
                       </p>
                       <p className="text-sm text-dark-300">{item.primary_genre || '-'}</p>
                     </div>
-                    <ConfidenceBadge confidence={item.confidence} />
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setXboxMockupGameId(item.id);
+                        }}
+                        className="p-1.5 text-xbox-green/70 hover:text-xbox-green transition-colors rounded-lg hover:bg-xbox-green/10"
+                        title="View Xbox Store Mockup"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </button>
+                      <ConfidenceBadge confidence={item.confidence} />
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -512,6 +547,18 @@ export default function HistoryPage() {
         <GameDetailModal
           gameId={selectedGameId}
           onClose={() => setSelectedGameId(null)}
+          onOpenXboxMockup={() => {
+            setXboxMockupGameId(selectedGameId);
+            setSelectedGameId(null);
+          }}
+        />
+      )}
+
+      {/* Xbox Store Mockup */}
+      {xboxMockupGameId && (
+        <XboxStoreMockup
+          gameId={xboxMockupGameId}
+          onClose={() => setXboxMockupGameId(null)}
         />
       )}
     </div>

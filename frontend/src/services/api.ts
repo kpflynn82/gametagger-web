@@ -42,7 +42,8 @@ export interface GameAnalysis {
   primary_genre?: string;
   analysis_notes?: string;
   sources_used?: string[];
-  [key: string]: unknown;  // For boolean tags
+  tags?: Record<string, boolean>;  // Structured tags object
+  [key: string]: unknown;  // For backward compatibility with flat boolean tags
 }
 
 export interface AnalysisSummary {
