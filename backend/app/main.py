@@ -104,18 +104,42 @@ async def debug_connectivity():
     # Test a simple API call with the real key
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if api_key:
+        # First try direct httpx POST (bypassing SDK)
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                r = await client.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers={
+                        "x-api-key": api_key,
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json",
+                    },
+                    json={
+                        "model": "claude-3-5-haiku-20241022",
+                        "max_tokens": 10,
+                        "messages": [{"role": "user", "content": "Say hi"}]
+                    }
+                )
+                if r.status_code == 200:
+                    data = r.json()
+                    results["direct_api_call"] = {"success": True, "response": data.get("content", [{}])[0].get("text", "")[:50]}
+                else:
+                    results["direct_api_call"] = {"success": False, "status": r.status_code, "body": r.text[:200]}
+        except Exception as e:
+            results["direct_api_call"] = {"success": False, "error": str(e), "type": type(e).__name__}
+
+        # Then try SDK
         try:
             import anthropic
             client = anthropic.Anthropic(api_key=api_key)
-            # Just try to make a minimal request
             response = client.messages.create(
                 model="claude-3-5-haiku-20241022",
                 max_tokens=10,
                 messages=[{"role": "user", "content": "Say hi"}]
             )
-            results["anthropic_api_call"] = {"success": True, "response": response.content[0].text[:50]}
+            results["sdk_api_call"] = {"success": True, "response": response.content[0].text[:50]}
         except Exception as e:
-            results["anthropic_api_call"] = {"success": False, "error": str(e), "type": type(e).__name__}
+            results["sdk_api_call"] = {"success": False, "error": str(e), "type": type(e).__name__}
 
     return results
 
