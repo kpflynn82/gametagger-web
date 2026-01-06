@@ -1,5 +1,86 @@
 import { useState } from 'react';
-import { Search, ChevronDown, ChevronRight, Gamepad2, BookOpen, Palette, Map, Wrench, Eye, Zap, DollarSign, User, Sparkles } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Gamepad2, BookOpen, Palette, Map, Wrench, Eye, Zap, DollarSign, User, Sparkles, Layers, Info } from 'lucide-react';
+
+// Primary Genre definitions - ONE genre per game (the defining classification)
+const GENRE_GLOSSARY: Record<string, { description: string; examples: string[] }> = {
+  // Action-based
+  "Action": { description: "Fast-paced combat emphasizing reflexes and physical challenges", examples: ["Devil May Cry 5", "Bayonetta", "God of War"] },
+  "Action RPG": { description: "Real-time combat combined with character progression and loot", examples: ["Diablo IV", "Elden Ring", "Path of Exile"] },
+  "Action Adventure": { description: "Exploration and combat with puzzle-solving elements", examples: ["The Legend of Zelda", "Uncharted", "Tomb Raider"] },
+  "First-Person Shooter": { description: "Combat through the protagonist's eyes with ranged weapons", examples: ["DOOM Eternal", "Call of Duty", "Halo Infinite"] },
+  "Third-Person Shooter": { description: "Ranged combat from behind-the-character camera perspective", examples: ["Gears of War", "Resident Evil 4", "Control"] },
+  "Shooter": { description: "General shooting-focused gameplay (top-down, side-scrolling, etc.)", examples: ["Enter the Gungeon", "Cuphead", "Hotline Miami"] },
+  "Bullet Hell": { description: "Dodging dense projectile patterns requiring precise movement", examples: ["Touhou", "Ikaruga", "Mushihimesama"] },
+
+  // RPG variants
+  "JRPG": { description: "Japanese-style RPG with turn-based combat and anime aesthetics", examples: ["Persona 5", "Final Fantasy", "Dragon Quest XI"] },
+  "Turn-Based RPG": { description: "Strategic combat with sequential turns and party management", examples: ["Divinity: Original Sin 2", "Baldur's Gate 3", "Octopath Traveler"] },
+  "Tactical RPG": { description: "Grid-based combat with positioning and unit management", examples: ["Fire Emblem", "XCOM 2", "Triangle Strategy"] },
+  "MMORPG": { description: "Massively multiplayer persistent world with social features", examples: ["World of Warcraft", "Final Fantasy XIV", "Guild Wars 2"] },
+  "Roguelike": { description: "Procedural runs with permadeath and full progression reset", examples: ["Spelunky 2", "Caves of Qud", "Cogmind"] },
+  "Roguelite": { description: "Procedural runs with some permanent progression between deaths", examples: ["Hades", "Dead Cells", "Slay the Spire"] },
+  "Dungeon Crawler": { description: "Exploring dungeons with loot, combat, and character progression", examples: ["Diablo", "Torchlight", "Grim Dawn"] },
+
+  // Platformers
+  "2D Platformer": { description: "Side-scrolling jumping challenges in 2D space", examples: ["Celeste", "Super Mario Bros. Wonder", "Shovel Knight"] },
+  "3D Platformer": { description: "Jumping challenges in 3D environments", examples: ["Super Mario Odyssey", "Ratchet & Clank", "A Hat in Time"] },
+  "Metroidvania": { description: "Interconnected world with ability-gated exploration", examples: ["Hollow Knight", "Metroid Dread", "Ori and the Will of the Wisps"] },
+  "Precision Platformer": { description: "Extremely challenging platforming requiring pixel-perfect execution", examples: ["Celeste", "Super Meat Boy", "The End Is Nigh"] },
+
+  // Strategy
+  "Real-Time Strategy": { description: "Base building and army management in real-time", examples: ["StarCraft II", "Age of Empires IV", "Company of Heroes"] },
+  "Turn-Based Strategy": { description: "Sequential tactical planning with no time pressure", examples: ["Civilization VI", "Into the Breach", "Advance Wars"] },
+  "Tower Defense": { description: "Placing defensive structures to stop enemy waves", examples: ["Bloons TD 6", "Kingdom Rush", "Defense Grid"] },
+  "4X Strategy": { description: "eXplore, eXpand, eXploit, eXterminate grand strategy", examples: ["Civilization VI", "Stellaris", "Endless Legend"] },
+  "Grand Strategy": { description: "Large-scale geopolitical simulation with complex systems", examples: ["Crusader Kings III", "Europa Universalis IV", "Hearts of Iron IV"] },
+  "Auto Battler": { description: "Automated combat with strategic team composition", examples: ["Teamfight Tactics", "Dota Underlords", "Super Auto Pets"] },
+
+  // Simulation
+  "Life Simulation": { description: "Simulating daily life, relationships, and activities", examples: ["The Sims 4", "Animal Crossing", "Stardew Valley"] },
+  "Farm Simulation": { description: "Agricultural management with farming mechanics", examples: ["Stardew Valley", "Farming Simulator", "Story of Seasons"] },
+  "City Builder": { description: "Urban planning and infrastructure management", examples: ["Cities: Skylines", "SimCity", "Frostpunk"] },
+  "Management Simulation": { description: "Running businesses, organizations, or systems", examples: ["Two Point Hospital", "Planet Coaster", "Football Manager"] },
+  "Racing Simulation": { description: "Realistic vehicle physics and racing mechanics", examples: ["Gran Turismo 7", "Forza Motorsport", "iRacing"] },
+
+  // Puzzle
+  "Puzzle": { description: "Logic and problem-solving as primary gameplay", examples: ["Tetris", "Portal 2", "The Witness"] },
+  "Puzzle Platformer": { description: "Platform navigation combined with puzzle-solving", examples: ["Braid", "Limbo", "Inside"] },
+  "Match-3": { description: "Matching similar tiles in rows or columns", examples: ["Candy Crush", "Puzzle Quest", "Gems of War"] },
+
+  // Adventure
+  "Adventure": { description: "Story-driven exploration with light puzzle elements", examples: ["Life is Strange", "Firewatch", "What Remains of Edith Finch"] },
+  "Narrative Adventure": { description: "Story-focused with branching choices and minimal gameplay", examples: ["Disco Elysium", "Kentucky Route Zero", "Night in the Woods"] },
+  "Point-and-Click": { description: "Classic adventure game with inventory puzzles", examples: ["Monkey Island", "Grim Fandango", "Thimbleweed Park"] },
+  "Visual Novel": { description: "Story told through text, images, and branching choices", examples: ["Ace Attorney", "Danganronpa", "Steins;Gate"] },
+  "Walking Simulator": { description: "Exploration-focused narrative with minimal mechanics", examples: ["Gone Home", "Dear Esther", "Everybody's Gone to the Rapture"] },
+
+  // Fighting
+  "2D Fighting": { description: "Side-view one-on-one combat with combos and special moves", examples: ["Street Fighter 6", "Guilty Gear Strive", "Mortal Kombat 1"] },
+  "3D Fighting": { description: "Arena-based combat with 3D movement", examples: ["Tekken 8", "Soulcalibur VI", "Virtua Fighter 5"] },
+  "Platform Fighter": { description: "Fighting on platforms with ring-out mechanics", examples: ["Super Smash Bros.", "Rivals of Aether", "MultiVersus"] },
+
+  // Racing
+  "Arcade Racing": { description: "Accessible, fast-paced racing with power-ups", examples: ["Need for Speed", "Burnout Paradise", "Forza Horizon 5"] },
+  "Kart Racing": { description: "Fun racing with items and character-based vehicles", examples: ["Mario Kart 8", "Crash Team Racing", "Team Sonic Racing"] },
+
+  // Horror
+  "Survival Horror": { description: "Resource-scarce horror with combat and survival mechanics", examples: ["Resident Evil", "Silent Hill 2", "Dead Space"] },
+  "Psychological Horror": { description: "Horror focused on atmosphere and mental terror", examples: ["Amnesia", "Soma", "Layers of Fear"] },
+
+  // Card/Board
+  "Card Game": { description: "Card-based gameplay as the primary mechanic", examples: ["Hearthstone", "Magic: The Gathering Arena", "Legends of Runeterra"] },
+  "Deck Builder": { description: "Building and optimizing card decks during gameplay", examples: ["Slay the Spire", "Monster Train", "Inscryption"] },
+  "Digital TCG": { description: "Digital trading card games with collection elements", examples: ["Pokemon TCG Live", "Yu-Gi-Oh! Master Duel", "Marvel Snap"] },
+
+  // Other
+  "Rhythm Game": { description: "Music-based gameplay synchronized to audio", examples: ["Beat Saber", "Guitar Hero", "Taiko no Tatsujin"] },
+  "Party Game": { description: "Multiplayer minigames for social group play", examples: ["Mario Party", "Jackbox Party Pack", "Fall Guys"] },
+  "Battle Royale": { description: "Last-player-standing multiplayer with shrinking arena", examples: ["Fortnite", "PUBG", "Apex Legends"] },
+  "Sandbox": { description: "Open-ended creative gameplay with player-driven goals", examples: ["Minecraft", "Terraria", "Garry's Mod"] },
+  "Idle Game": { description: "Passive progression with minimal active input", examples: ["Cookie Clicker", "Adventure Capitalist", "Melvor Idle"] },
+  "Souls-like": { description: "Challenging action RPG with stamina combat and death penalties", examples: ["Dark Souls", "Elden Ring", "Lies of P"] },
+  "Immersive Sim": { description: "Systems-driven gameplay with multiple solutions", examples: ["Deus Ex", "Dishonored", "Prey"] },
+};
 
 // Tag definitions with descriptions - Expanded Standardized Taxonomy v2.0
 const TAG_GLOSSARY = {
@@ -336,7 +417,78 @@ const COLOR_CLASSES: Record<string, { bg: string; text: string; border: string; 
   amber: { bg: 'bg-amber-500/10', text: 'text-amber-300', border: 'border-amber-500/30', icon: 'text-amber-400' },
   emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-300', border: 'border-emerald-500/30', icon: 'text-emerald-400' },
   pink: { bg: 'bg-pink-500/10', text: 'text-pink-300', border: 'border-pink-500/30', icon: 'text-pink-400' },
+  green: { bg: 'bg-xbox-green/10', text: 'text-xbox-green', border: 'border-xbox-green/30', icon: 'text-xbox-green' },
 };
+
+// Genre Section Component
+function GenreSection({ isExpanded, onToggle, searchQuery }: { isExpanded: boolean; onToggle: () => void; searchQuery: string }) {
+  const colors = COLOR_CLASSES.green;
+
+  const filteredGenres = Object.entries(GENRE_GLOSSARY).filter(([genreName, data]) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return genreName.toLowerCase().includes(query) ||
+           data.description.toLowerCase().includes(query) ||
+           data.examples.some(ex => ex.toLowerCase().includes(query));
+  });
+
+  if (searchQuery && filteredGenres.length === 0) return null;
+
+  return (
+    <div className="glass-card overflow-hidden">
+      <button
+        onClick={onToggle}
+        className={`w-full flex items-center justify-between p-5 ${colors.bg} border-b ${colors.border} transition-colors hover:bg-opacity-20`}
+      >
+        <div className="flex items-center gap-4">
+          <div className={`p-2.5 rounded-xl ${colors.bg} ${colors.border} border`}>
+            <Layers className={`h-5 w-5 ${colors.icon}`} />
+          </div>
+          <div className="text-left">
+            <h3 className="text-lg font-semibold text-white">Primary Genres</h3>
+            <p className="text-sm text-dark-200">The main classification - ONE per game</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${colors.bg} ${colors.text} ${colors.border} border`}>
+            {filteredGenres.length} genres
+          </span>
+          {isExpanded ? (
+            <ChevronDown className="h-5 w-5 text-dark-200" />
+          ) : (
+            <ChevronRight className="h-5 w-5 text-dark-200" />
+          )}
+        </div>
+      </button>
+
+      {isExpanded && (
+        <div className="p-5">
+          <div className="grid gap-3">
+            {filteredGenres.map(([genreName, data]) => (
+              <div
+                key={genreName}
+                className={`p-4 rounded-xl border ${colors.border} ${colors.bg} transition-all duration-200 hover:border-opacity-50`}
+              >
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className={`inline-block px-3 py-1 rounded-lg text-sm font-medium ${colors.bg} ${colors.text} ${colors.border} border whitespace-nowrap`}>
+                      {genreName}
+                    </span>
+                    <p className="text-sm text-dark-100 leading-relaxed">{data.description}</p>
+                  </div>
+                  <div className="flex items-center gap-2 ml-1">
+                    <span className="text-xs text-dark-300">Examples:</span>
+                    <span className="text-xs text-dark-200">{data.examples.join(', ')}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface GlossaryCategory {
   label: string;
@@ -420,7 +572,7 @@ function CategorySection({ category, isExpanded, onToggle, searchQuery }: Catego
 
 export default function TagGlossary() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['gameplay']));
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['genres']));
 
   const toggleCategory = (category: string) => {
     setExpandedCategories((prev) => {
@@ -435,15 +587,27 @@ export default function TagGlossary() {
   };
 
   const expandAll = () => {
-    setExpandedCategories(new Set(Object.keys(TAG_GLOSSARY)));
+    setExpandedCategories(new Set(['genres', ...Object.keys(TAG_GLOSSARY)]));
   };
 
   const collapseAll = () => {
     setExpandedCategories(new Set());
   };
 
-  // Count total matching tags for search
+  // Count totals
+  const totalGenres = Object.keys(GENRE_GLOSSARY).length;
   const totalTags = Object.values(TAG_GLOSSARY).reduce((acc, cat) => acc + Object.keys(cat.tags).length, 0);
+
+  // Count matching for search
+  const matchingGenres = searchQuery
+    ? Object.entries(GENRE_GLOSSARY).filter(([name, data]) => {
+        const query = searchQuery.toLowerCase();
+        return name.toLowerCase().includes(query) ||
+               data.description.toLowerCase().includes(query) ||
+               data.examples.some(ex => ex.toLowerCase().includes(query));
+      }).length
+    : totalGenres;
+
   const matchingTags = searchQuery
     ? Object.values(TAG_GLOSSARY).reduce((acc, cat) => {
         return acc + Object.entries(cat.tags).filter(([tagName, desc]) => {
@@ -458,9 +622,9 @@ export default function TagGlossary() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Tag Glossary</h1>
+          <h1 className="text-2xl font-bold text-white">Classification Glossary</h1>
           <p className="text-dark-200 mt-1">
-            Complete reference of all VGMS classification tags
+            Complete reference of genres and tags in the VGMS taxonomy
           </p>
         </div>
 
@@ -483,20 +647,43 @@ export default function TagGlossary() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search tags by name or description..."
+              placeholder="Search genres and tags..."
               className="input-xbox pl-12"
             />
           </div>
           <div className="text-sm text-dark-200 whitespace-nowrap">
             {searchQuery ? (
               <span>
-                Found <span className="text-xbox-green font-medium">{matchingTags}</span> of {totalTags} tags
+                Found <span className="text-xbox-green font-medium">{matchingGenres}</span> genres, <span className="text-xbox-green font-medium">{matchingTags}</span> tags
               </span>
             ) : (
               <span>
-                <span className="text-xbox-green font-medium">{totalTags}</span> total tags
+                <span className="text-xbox-green font-medium">{totalGenres}</span> genres, <span className="text-xbox-green font-medium">{totalTags}</span> tags
               </span>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Genre vs Tags Explanation */}
+      <div className="glass-card p-4 border-l-4 border-blue-500">
+        <div className="flex gap-3">
+          <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="font-medium text-white">Genres vs Tags: What's the Difference?</h4>
+            <div className="text-sm text-dark-200 mt-2 space-y-2">
+              <p>
+                <span className="text-xbox-green font-medium">Primary Genre</span> = The ONE defining classification.
+                What you'd say if asked "what type of game is this?" (e.g., "It's a Metroidvania")
+              </p>
+              <p>
+                <span className="text-purple-300 font-medium">Gameplay Tags</span> = ALL applicable elements.
+                A game can have multiple tags (e.g., action + platformer + souls_like)
+              </p>
+              <p className="text-dark-300 italic">
+                Example: Hollow Knight has Genre: "Metroidvania" and Tags: gameplay_action, gameplay_platformer, gameplay_metroidvania, mechanic_boss_battles
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -515,7 +702,16 @@ export default function TagGlossary() {
         </div>
       </div>
 
-      {/* Categories */}
+      {/* Genre Section */}
+      <div className="space-y-4">
+        <GenreSection
+          isExpanded={expandedCategories.has('genres')}
+          onToggle={() => toggleCategory('genres')}
+          searchQuery={searchQuery}
+        />
+      </div>
+
+      {/* Tag Categories */}
       <div className="space-y-4">
         {Object.entries(TAG_GLOSSARY).map(([key, category]) => (
           <CategorySection
@@ -529,12 +725,12 @@ export default function TagGlossary() {
       </div>
 
       {/* No Results */}
-      {searchQuery && matchingTags === 0 && (
+      {searchQuery && matchingTags === 0 && matchingGenres === 0 && (
         <div className="glass-card p-12 text-center">
           <Search className="h-12 w-12 text-dark-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">No tags found</h3>
+          <h3 className="text-lg font-medium text-white mb-2">No results found</h3>
           <p className="text-dark-200">
-            No tags match your search for "{searchQuery}"
+            No genres or tags match your search for "{searchQuery}"
           </p>
         </div>
       )}
