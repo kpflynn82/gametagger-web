@@ -345,7 +345,7 @@ const TAG_GLOSSARY = {
     },
   },
   engagement: {
-    label: 'Engagement (Nitrogen)',
+    label: 'Engagement',
     description: 'Player retention and engagement mechanics',
     icon: Zap,
     color: 'amber',
@@ -373,7 +373,7 @@ const TAG_GLOSSARY = {
     },
   },
   monetization: {
-    label: 'Monetization (Nitrogen)',
+    label: 'Monetization',
     description: 'Business model and payment structures',
     icon: DollarSign,
     color: 'emerald',
@@ -390,7 +390,7 @@ const TAG_GLOSSARY = {
     },
   },
   protagonist: {
-    label: 'Protagonist (Nitrogen)',
+    label: 'Protagonist',
     description: 'Player character configuration',
     icon: User,
     color: 'pink',
@@ -685,20 +685,6 @@ export default function TagGlossary() {
                 Example: Hollow Knight has Genre: "Metroidvania" and Tags: gameplay_action, gameplay_platformer, gameplay_metroidvania, mechanic_boss_battles
               </p>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Nitrogen Tags Notice */}
-      <div className="glass-card p-4 border-l-4 border-xbox-green">
-        <div className="flex gap-3">
-          <Zap className="h-5 w-5 text-xbox-green flex-shrink-0 mt-0.5" />
-          <div>
-            <h4 className="font-medium text-white">Nitrogen Tags</h4>
-            <p className="text-sm text-dark-200 mt-1">
-              Tags marked with "Nitrogen" are specialized classifications for mobile gaming analysis,
-              tracking engagement mechanics, monetization models, and protagonist configurations.
-            </p>
           </div>
         </div>
       </div>
