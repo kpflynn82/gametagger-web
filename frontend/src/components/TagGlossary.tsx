@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Search, ChevronDown, ChevronRight, Gamepad2, BookOpen, Palette, Map, Wrench, Eye, Zap, DollarSign, User, Sparkles, Layers, Info } from 'lucide-react';
 
 // Primary Genre definitions - ONE genre per game (the defining classification)
-// Consolidated taxonomy v3.0 - 43 genres
+// Consolidated taxonomy v3.1 - 44 genres
 const GENRE_GLOSSARY: Record<string, { description: string; examples: string[] }> = {
   // Action-based
   "Action": { description: "Fast-paced combat emphasizing reflexes and physical challenges", examples: ["Devil May Cry 5", "Bayonetta", "God of War"] },
@@ -76,7 +76,8 @@ const GENRE_GLOSSARY: Record<string, { description: string; examples: string[] }
   "Rhythm Game": { description: "Music-based gameplay synchronized to audio", examples: ["Beat Saber", "Guitar Hero", "Taiko no Tatsujin"] },
   "Party Game": { description: "Multiplayer minigames for social group play", examples: ["Mario Party", "Jackbox Party Pack", "Fall Guys"] },
   "Battle Royale": { description: "Last-player-standing multiplayer with shrinking arena", examples: ["Fortnite", "PUBG", "Apex Legends"] },
-  "Sandbox": { description: "Open-ended creative gameplay with player-driven goals", examples: ["Minecraft", "Terraria", "Garry's Mod"] },
+  "Sandbox": { description: "Open-ended creative gameplay with player-driven goals", examples: ["Garry's Mod", "Roblox", "Dreams"] },
+  "Survival": { description: "Open-world resource gathering, crafting, and building while managing hunger, thirst, and environmental threats", examples: ["Subnautica", "Don't Starve", "Valheim", "Minecraft Survival", "The Forest"] },
   "Idle Game": { description: "Passive progression with minimal active input", examples: ["Cookie Clicker", "Adventure Capitalist", "Melvor Idle"] },
   "Souls-like": { description: "Challenging action RPG with stamina combat and death penalties", examples: ["Dark Souls", "Elden Ring", "Lies of P"] },
   "Immersive Sim": { description: "Systems-driven gameplay with multiple solutions", examples: ["Deus Ex", "Dishonored", "Prey"] },

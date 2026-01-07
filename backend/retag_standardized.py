@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Re-tag all games with standardized taxonomy v2.0
-Fixes inconsistencies and applies expanded schema.
+Re-tag all games with standardized taxonomy v3.0
+Consolidated 43-genre taxonomy with Haiku model.
 """
 import asyncio
 import json
@@ -29,41 +29,38 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Standardized Primary Genres (pick ONE)
+# Standardized Primary Genres - Consolidated v3.0 (43 genres)
 STANDARDIZED_GENRES = [
-    # Action
+    # Action-based
     "Action", "Action RPG", "Action Adventure", "First-Person Shooter",
-    "Third-Person Shooter", "Shooter", "Bullet Hell", "Beat 'em Up",
-    # RPG
-    "JRPG", "Turn-Based RPG", "Tactical RPG", "Roguelike", "Roguelite",
-    "Dungeon Crawler", "MMORPG",
-    # Platformer
-    "2D Platformer", "3D Platformer", "Metroidvania", "Precision Platformer",
+    "Third-Person Shooter", "Bullet Hell",
+    # RPG variants
+    "JRPG", "Turn-Based RPG", "Tactical RPG", "MMORPG", "Roguelike",
+    # Platformers
+    "2D Platformer", "3D Platformer", "Metroidvania",
     # Strategy
     "Real-Time Strategy", "Turn-Based Strategy", "Tower Defense",
-    "4X Strategy", "Auto Battler", "Grand Strategy",
+    "4X Strategy", "Grand Strategy",
     # Simulation
-    "Life Simulation", "Farm Simulation", "Business Simulation",
-    "Racing Simulation", "Sports Simulation", "Flight Simulation",
-    "City Builder", "Management Simulation",
+    "Life Simulation", "Farm Simulation", "Management Simulation",
+    "Racing Simulation", "Flight Simulation", "City Builder",
     # Puzzle
-    "Puzzle", "Puzzle Platformer", "Match-3", "Physics Puzzle", "Hidden Object",
+    "Puzzle", "Puzzle Platformer", "Match-3", "Physics Puzzle",
     # Adventure
-    "Adventure", "Narrative Adventure", "Point-and-Click", "Visual Novel",
-    "Walking Simulator", "Interactive Fiction",
+    "Adventure", "Narrative Adventure", "Visual Novel",
     # Fighting
-    "2D Fighting", "3D Fighting", "Platform Fighter", "Arena Fighter",
+    "2D Fighting", "3D Fighting",
     # Racing
-    "Arcade Racing", "Kart Racing", "Rally Racing", "Racing",
-    # Sports
-    "Sports", "Extreme Sports", "Golf", "Football", "Basketball",
+    "Arcade Racing", "Kart Racing", "Rally Racing",
     # Horror
-    "Survival Horror", "Psychological Horror", "Horror",
+    "Horror",
     # Card/Board
     "Card Game", "Deck Builder", "Board Game", "Digital TCG",
+    # Sports
+    "Sports",
     # Other
-    "Rhythm Game", "Party Game", "Battle Royale", "Sandbox",
-    "Idle Game", "Educational", "Trivia", "Simulation",
+    "Arcade", "Rhythm Game", "Party Game", "Battle Royale", "Sandbox",
+    "Idle Game", "Souls-like", "Immersive Sim", "Educational",
 ]
 
 # Standardized Tags Schema
@@ -204,7 +201,7 @@ async def retag_game(client, game_name: str, old_genre: str, old_tags: dict, sim
     )
 
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-3-5-haiku-20241022",
         max_tokens=2000,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -304,7 +301,7 @@ async def main():
             if result is None:
                 # Sync call workaround
                 response = client.messages.create(
-                    model="claude-sonnet-4-20250514",
+                    model="claude-3-5-haiku-20241022",
                     max_tokens=2000,
                     messages=[{"role": "user", "content": RETAG_PROMPT.format(
                         game_name=game_name,

@@ -1,10 +1,10 @@
 """
-Expanded VGMS Taxonomy v3.0
+Expanded VGMS Taxonomy v3.1
 Based on analysis of 953 tagged games from the Nitrogen database.
-Consolidated taxonomy with 43 primary genres.
+Consolidated taxonomy with 44 primary genres.
 """
 
-# Standardized Primary Genres (consolidated to 43 genres)
+# Standardized Primary Genres (consolidated to 44 genres)
 PRIMARY_GENRES = {
     # Action-based
     "Action": ["action", "hack and slash", "beat em up", "brawler"],
@@ -78,7 +78,8 @@ PRIMARY_GENRES = {
     "Rhythm Game": ["rhythm", "music game", "rhythm action"],
     "Party Game": ["party game", "party"],
     "Battle Royale": ["battle royale", "br"],
-    "Sandbox": ["sandbox", "open world sandbox"],
+    "Sandbox": ["sandbox", "open world sandbox", "creative sandbox"],
+    "Survival": ["survival", "survival crafting", "survival game", "open world survival"],
     "Idle Game": ["idle", "clicker", "incremental"],
     "Souls-like": ["souls-like", "soulslike", "souls like"],
     "Immersive Sim": ["immersive sim", "immersive simulation"],
