@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Search, ChevronDown, ChevronRight, Gamepad2, BookOpen, Palette, Map, Wrench, Eye, Zap, DollarSign, User, Sparkles, Layers, Info } from 'lucide-react';
 
 // Primary Genre definitions - ONE genre per game (the defining classification)
+// Consolidated taxonomy v3.0 - 43 genres
 const GENRE_GLOSSARY: Record<string, { description: string; examples: string[] }> = {
   // Action-based
   "Action": { description: "Fast-paced combat emphasizing reflexes and physical challenges", examples: ["Devil May Cry 5", "Bayonetta", "God of War"] },
-  "Action RPG": { description: "Real-time combat combined with character progression and loot", examples: ["Diablo IV", "Elden Ring", "Path of Exile"] },
+  "Action RPG": { description: "Real-time combat combined with character progression and loot", examples: ["Diablo IV", "Elden Ring", "Path of Exile", "Torchlight"] },
   "Action Adventure": { description: "Exploration and combat with puzzle-solving elements", examples: ["The Legend of Zelda", "Uncharted", "Tomb Raider"] },
   "First-Person Shooter": { description: "Combat through the protagonist's eyes with ranged weapons", examples: ["DOOM Eternal", "Call of Duty", "Halo Infinite"] },
   "Third-Person Shooter": { description: "Ranged combat from behind-the-character camera perspective", examples: ["Gears of War", "Resident Evil 4", "Control"] },
-  "Shooter": { description: "General shooting-focused gameplay (top-down, side-scrolling, etc.)", examples: ["Enter the Gungeon", "Cuphead", "Hotline Miami"] },
   "Bullet Hell": { description: "Dodging dense projectile patterns requiring precise movement", examples: ["Touhou", "Ikaruga", "Mushihimesama"] },
 
   // RPG variants
@@ -17,15 +17,12 @@ const GENRE_GLOSSARY: Record<string, { description: string; examples: string[] }
   "Turn-Based RPG": { description: "Strategic combat with sequential turns and party management", examples: ["Divinity: Original Sin 2", "Baldur's Gate 3", "Octopath Traveler"] },
   "Tactical RPG": { description: "Grid-based combat with positioning and unit management", examples: ["Fire Emblem", "XCOM 2", "Triangle Strategy"] },
   "MMORPG": { description: "Massively multiplayer persistent world with social features", examples: ["World of Warcraft", "Final Fantasy XIV", "Guild Wars 2"] },
-  "Roguelike": { description: "Procedural runs with permadeath and full progression reset", examples: ["Spelunky 2", "Caves of Qud", "Cogmind"] },
-  "Roguelite": { description: "Procedural runs with some permanent progression between deaths", examples: ["Hades", "Dead Cells", "Slay the Spire"] },
-  "Dungeon Crawler": { description: "Exploring dungeons with loot, combat, and character progression", examples: ["Diablo", "Torchlight", "Grim Dawn"] },
+  "Roguelike": { description: "Procedural runs with permadeath or permanent progression between deaths", examples: ["Hades", "Dead Cells", "Slay the Spire", "Spelunky 2"] },
 
   // Platformers
-  "2D Platformer": { description: "Side-scrolling jumping challenges in 2D space", examples: ["Celeste", "Super Mario Bros. Wonder", "Shovel Knight"] },
+  "2D Platformer": { description: "Side-scrolling jumping challenges in 2D space", examples: ["Celeste", "Super Mario Bros. Wonder", "Shovel Knight", "Super Meat Boy"] },
   "3D Platformer": { description: "Jumping challenges in 3D environments", examples: ["Super Mario Odyssey", "Ratchet & Clank", "A Hat in Time"] },
   "Metroidvania": { description: "Interconnected world with ability-gated exploration", examples: ["Hollow Knight", "Metroid Dread", "Ori and the Will of the Wisps"] },
-  "Precision Platformer": { description: "Extremely challenging platforming requiring pixel-perfect execution", examples: ["Celeste", "Super Meat Boy", "The End Is Nigh"] },
 
   // Strategy
   "Real-Time Strategy": { description: "Base building and army management in real-time", examples: ["StarCraft II", "Age of Empires IV", "Company of Heroes"] },
@@ -33,7 +30,6 @@ const GENRE_GLOSSARY: Record<string, { description: string; examples: string[] }
   "Tower Defense": { description: "Placing defensive structures to stop enemy waves", examples: ["Bloons TD 6", "Kingdom Rush", "Defense Grid"] },
   "4X Strategy": { description: "eXplore, eXpand, eXploit, eXterminate grand strategy", examples: ["Civilization VI", "Stellaris", "Endless Legend"] },
   "Grand Strategy": { description: "Large-scale geopolitical simulation with complex systems", examples: ["Crusader Kings III", "Europa Universalis IV", "Hearts of Iron IV"] },
-  "Auto Battler": { description: "Automated combat with strategic team composition", examples: ["Teamfight Tactics", "Dota Underlords", "Super Auto Pets"] },
 
   // Simulation
   "Life Simulation": { description: "Simulating daily life, relationships, and activities", examples: ["The Sims 4", "Animal Crossing", "Stardew Valley"] },
@@ -41,38 +37,42 @@ const GENRE_GLOSSARY: Record<string, { description: string; examples: string[] }
   "City Builder": { description: "Urban planning and infrastructure management", examples: ["Cities: Skylines", "SimCity", "Frostpunk"] },
   "Management Simulation": { description: "Running businesses, organizations, or systems", examples: ["Two Point Hospital", "Planet Coaster", "Football Manager"] },
   "Racing Simulation": { description: "Realistic vehicle physics and racing mechanics", examples: ["Gran Turismo 7", "Forza Motorsport", "iRacing"] },
+  "Flight Simulation": { description: "Aircraft piloting with realistic or arcade physics", examples: ["Microsoft Flight Simulator", "Ace Combat 7", "IL-2 Sturmovik"] },
 
   // Puzzle
   "Puzzle": { description: "Logic and problem-solving as primary gameplay", examples: ["Tetris", "Portal 2", "The Witness"] },
   "Puzzle Platformer": { description: "Platform navigation combined with puzzle-solving", examples: ["Braid", "Limbo", "Inside"] },
   "Match-3": { description: "Matching similar tiles in rows or columns", examples: ["Candy Crush", "Puzzle Quest", "Gems of War"] },
+  "Physics Puzzle": { description: "Puzzles based on realistic physics simulation", examples: ["Angry Birds", "World of Goo", "Human Fall Flat"] },
 
   // Adventure
-  "Adventure": { description: "Story-driven exploration with light puzzle elements", examples: ["Life is Strange", "Firewatch", "What Remains of Edith Finch"] },
-  "Narrative Adventure": { description: "Story-focused with branching choices and minimal gameplay", examples: ["Disco Elysium", "Kentucky Route Zero", "Night in the Woods"] },
-  "Point-and-Click": { description: "Classic adventure game with inventory puzzles", examples: ["Monkey Island", "Grim Fandango", "Thimbleweed Park"] },
+  "Adventure": { description: "Story-driven exploration with puzzle elements", examples: ["Monkey Island", "Grim Fandango", "Life is Strange"] },
+  "Narrative Adventure": { description: "Story-focused with branching choices and exploration", examples: ["Disco Elysium", "Gone Home", "What Remains of Edith Finch"] },
   "Visual Novel": { description: "Story told through text, images, and branching choices", examples: ["Ace Attorney", "Danganronpa", "Steins;Gate"] },
-  "Walking Simulator": { description: "Exploration-focused narrative with minimal mechanics", examples: ["Gone Home", "Dear Esther", "Everybody's Gone to the Rapture"] },
 
   // Fighting
-  "2D Fighting": { description: "Side-view one-on-one combat with combos and special moves", examples: ["Street Fighter 6", "Guilty Gear Strive", "Mortal Kombat 1"] },
+  "2D Fighting": { description: "Side-view combat with combos, special moves, or ring-outs", examples: ["Street Fighter 6", "Super Smash Bros.", "Guilty Gear Strive"] },
   "3D Fighting": { description: "Arena-based combat with 3D movement", examples: ["Tekken 8", "Soulcalibur VI", "Virtua Fighter 5"] },
-  "Platform Fighter": { description: "Fighting on platforms with ring-out mechanics", examples: ["Super Smash Bros.", "Rivals of Aether", "MultiVersus"] },
 
   // Racing
   "Arcade Racing": { description: "Accessible, fast-paced racing with power-ups", examples: ["Need for Speed", "Burnout Paradise", "Forza Horizon 5"] },
   "Kart Racing": { description: "Fun racing with items and character-based vehicles", examples: ["Mario Kart 8", "Crash Team Racing", "Team Sonic Racing"] },
+  "Rally Racing": { description: "Off-road racing with realistic terrain and handling", examples: ["Dirt Rally 2.0", "WRC", "Art of Rally"] },
 
   // Horror
-  "Survival Horror": { description: "Resource-scarce horror with combat and survival mechanics", examples: ["Resident Evil", "Silent Hill 2", "Dead Space"] },
-  "Psychological Horror": { description: "Horror focused on atmosphere and mental terror", examples: ["Amnesia", "Soma", "Layers of Fear"] },
+  "Horror": { description: "Fear-inducing gameplay with tense atmosphere and survival elements", examples: ["Resident Evil", "Silent Hill 2", "Amnesia", "Dead Space"] },
 
   // Card/Board
   "Card Game": { description: "Card-based gameplay as the primary mechanic", examples: ["Hearthstone", "Magic: The Gathering Arena", "Legends of Runeterra"] },
   "Deck Builder": { description: "Building and optimizing card decks during gameplay", examples: ["Slay the Spire", "Monster Train", "Inscryption"] },
+  "Board Game": { description: "Digital adaptations of tabletop board games", examples: ["Tabletop Simulator", "Wingspan", "Gloomhaven"] },
   "Digital TCG": { description: "Digital trading card games with collection elements", examples: ["Pokemon TCG Live", "Yu-Gi-Oh! Master Duel", "Marvel Snap"] },
 
+  // Sports
+  "Sports": { description: "Athletic competition based on real or fictional sports", examples: ["FIFA", "NBA 2K", "Madden NFL", "Rocket League"] },
+
   // Other
+  "Arcade": { description: "Accessible action games with simple controls and pick-up-and-play design", examples: ["Enter the Gungeon", "Hotline Miami", "Pac-Man", "Geometry Wars"] },
   "Rhythm Game": { description: "Music-based gameplay synchronized to audio", examples: ["Beat Saber", "Guitar Hero", "Taiko no Tatsujin"] },
   "Party Game": { description: "Multiplayer minigames for social group play", examples: ["Mario Party", "Jackbox Party Pack", "Fall Guys"] },
   "Battle Royale": { description: "Last-player-standing multiplayer with shrinking arena", examples: ["Fortnite", "PUBG", "Apex Legends"] },
@@ -80,6 +80,7 @@ const GENRE_GLOSSARY: Record<string, { description: string; examples: string[] }
   "Idle Game": { description: "Passive progression with minimal active input", examples: ["Cookie Clicker", "Adventure Capitalist", "Melvor Idle"] },
   "Souls-like": { description: "Challenging action RPG with stamina combat and death penalties", examples: ["Dark Souls", "Elden Ring", "Lies of P"] },
   "Immersive Sim": { description: "Systems-driven gameplay with multiple solutions", examples: ["Deus Ex", "Dishonored", "Prey"] },
+  "Educational": { description: "Learning-focused gameplay with educational content", examples: ["Oregon Trail", "Kerbal Space Program", "Big Brain Academy"] },
 };
 
 // Tag definitions with descriptions - Expanded Standardized Taxonomy v2.0

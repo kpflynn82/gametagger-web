@@ -1,48 +1,44 @@
 """
-Expanded VGMS Taxonomy v2.0
+Expanded VGMS Taxonomy v3.0
 Based on analysis of 953 tagged games from the Nitrogen database.
-Standardized, deduplicated, and expanded with genre-specific mechanics.
+Consolidated taxonomy with 43 primary genres.
 """
 
-# Standardized Primary Genres (consolidated from 313 variations)
+# Standardized Primary Genres (consolidated to 43 genres)
 PRIMARY_GENRES = {
     # Action-based
     "Action": ["action", "hack and slash", "beat em up", "brawler"],
-    "Action RPG": ["action rpg", "arpg", "action role-playing"],
+    "Action RPG": ["action rpg", "arpg", "action role-playing", "dungeon crawler", "dungeon crawling"],
     "Action Adventure": ["action adventure", "action-adventure"],
     "First-Person Shooter": ["fps", "first person shooter", "first-person shooter"],
     "Third-Person Shooter": ["tps", "third person shooter"],
-    "Shooter": ["shooter", "shoot em up", "shmup"],
-    "Bullet Hell": ["bullet hell", "danmaku", "bullet hell shooter"],
+    "Bullet Hell": ["bullet hell", "danmaku", "bullet hell shooter", "shmup", "shoot em up"],
 
     # RPG variants
     "JRPG": ["jrpg", "japanese rpg", "japanese role-playing"],
-    "Turn-Based RPG": ["turn-based rpg", "turn based rpg", "tactical rpg"],
-    "Action RPG": ["action rpg", "arpg"],
+    "Turn-Based RPG": ["turn-based rpg", "turn based rpg"],
+    "Tactical RPG": ["tactical rpg", "srpg", "strategy rpg"],
     "MMORPG": ["mmorpg", "mmo rpg", "massively multiplayer"],
-    "Roguelike": ["roguelike", "roguelite", "action roguelike"],
-    "Dungeon Crawler": ["dungeon crawler", "dungeon crawling"],
+    "Roguelike": ["roguelike", "roguelite", "action roguelike", "rogue-like", "rogue-lite"],
 
     # Platformers
-    "2D Platformer": ["2d platformer", "side-scroller", "sidescroller"],
+    "2D Platformer": ["2d platformer", "side-scroller", "sidescroller", "precision platformer", "masocore"],
     "3D Platformer": ["3d platformer", "3d platform"],
     "Metroidvania": ["metroidvania", "metroid-like"],
-    "Precision Platformer": ["precision platformer", "masocore"],
 
     # Strategy
     "Real-Time Strategy": ["rts", "real-time strategy", "real time strategy"],
     "Turn-Based Strategy": ["tbs", "turn-based strategy", "turn based strategy"],
     "Tower Defense": ["tower defense", "td"],
-    "4X Strategy": ["4x", "4x strategy", "grand strategy"],
-    "Auto Battler": ["auto battler", "auto chess", "autobattler"],
+    "4X Strategy": ["4x", "4x strategy"],
+    "Grand Strategy": ["grand strategy", "historical strategy"],
 
     # Simulation
     "Life Simulation": ["life sim", "life simulation", "virtual life"],
     "Farm Simulation": ["farming sim", "farm simulation", "farming"],
-    "Business Simulation": ["business sim", "tycoon", "management sim"],
+    "Management Simulation": ["management sim", "business sim", "tycoon"],
     "Racing Simulation": ["racing sim", "realistic racing", "sim racing"],
-    "Sports Simulation": ["sports sim", "sports simulation"],
-    "Flight Simulation": ["flight sim", "flying simulation"],
+    "Flight Simulation": ["flight sim", "flying simulation", "flight simulator"],
     "City Builder": ["city builder", "city building", "urban planning"],
 
     # Puzzle
@@ -50,19 +46,15 @@ PRIMARY_GENRES = {
     "Puzzle Platformer": ["puzzle platformer", "puzzle-platformer"],
     "Match-3": ["match-3", "match 3", "tile matching"],
     "Physics Puzzle": ["physics puzzle", "physics-based puzzle"],
-    "Hidden Object": ["hidden object", "seek and find"],
 
     # Adventure
-    "Adventure": ["adventure", "story adventure"],
-    "Narrative Adventure": ["narrative adventure", "interactive story"],
-    "Point-and-Click": ["point and click", "point-and-click", "graphic adventure"],
+    "Adventure": ["adventure", "story adventure", "point and click", "point-and-click", "graphic adventure"],
+    "Narrative Adventure": ["narrative adventure", "interactive story", "walking sim", "walking simulator", "exploration game"],
     "Visual Novel": ["visual novel", "vn", "interactive fiction"],
-    "Walking Simulator": ["walking sim", "walking simulator", "exploration game"],
 
     # Fighting
-    "2D Fighting": ["2d fighting", "2d fighter"],
+    "2D Fighting": ["2d fighting", "2d fighter", "platform fighter", "smash-like"],
     "3D Fighting": ["3d fighting", "3d fighter", "arena fighter"],
-    "Platform Fighter": ["platform fighter", "smash-like"],
 
     # Racing
     "Arcade Racing": ["arcade racing", "arcade racer"],
@@ -70,24 +62,26 @@ PRIMARY_GENRES = {
     "Rally Racing": ["rally", "rally racing", "rally simulation"],
 
     # Sports
-    "Sports": ["sports", "athletic"],
-    "Extreme Sports": ["extreme sports", "action sports"],
+    "Sports": ["sports", "athletic", "extreme sports", "action sports", "sports sim"],
 
     # Horror
-    "Survival Horror": ["survival horror", "horror survival"],
-    "Psychological Horror": ["psychological horror", "horror"],
+    "Horror": ["horror", "survival horror", "psychological horror", "horror survival"],
 
     # Card/Board
-    "Card Game": ["card game", "ccg", "tcg", "trading card"],
+    "Card Game": ["card game", "ccg"],
     "Deck Builder": ["deck builder", "deckbuilder", "deck building"],
     "Board Game": ["board game", "digital board game"],
+    "Digital TCG": ["tcg", "trading card", "digital tcg"],
 
     # Other
+    "Arcade": ["arcade", "arcade action", "twin-stick shooter", "top-down shooter"],
     "Rhythm Game": ["rhythm", "music game", "rhythm action"],
     "Party Game": ["party game", "party"],
     "Battle Royale": ["battle royale", "br"],
     "Sandbox": ["sandbox", "open world sandbox"],
     "Idle Game": ["idle", "clicker", "incremental"],
+    "Souls-like": ["souls-like", "soulslike", "souls like"],
+    "Immersive Sim": ["immersive sim", "immersive simulation"],
     "Educational": ["educational", "edutainment"],
 }
 
