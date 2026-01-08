@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { Target, Gamepad2, Trophy, X, ArrowUpRight, Zap, ExternalLink, CheckCircle, DollarSign, Layers, ShieldCheck, AlertTriangle, ChevronRight } from 'lucide-react';
-import { getStats, getPopularGames, getAnalysis, getHistory, type StatsResponse, type PopularGamesResponse, type AnalysisSummary } from '../services/api';
+import { Target, Gamepad2, Trophy, X, ArrowUpRight, Zap, ExternalLink, CheckCircle, DollarSign, Layers, ShieldCheck, AlertTriangle, ChevronRight, Pencil, Trash2, Globe, Save } from 'lucide-react';
+import { getStats, getPopularGames, getAnalysis, getHistory, updateAnalysis, deleteAnalysis, type StatsResponse, type PopularGamesResponse, type AnalysisSummary, type AnalysisUpdate } from '../services/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import XboxStoreMockup from './XboxStoreMockup';
 
 // Tag category configuration
@@ -146,6 +147,235 @@ function GameDetailModal({ gameId, onClose, onOpenXboxMockup }: { gameId: number
   );
 }
 
+// Generate external links for game verification
+function getWikipediaUrl(gameName: string): string {
+  const searchQuery = encodeURIComponent(gameName + ' video game');
+  return `https://en.wikipedia.org/wiki/Special:Search?search=${searchQuery}`;
+}
+
+function getXboxStoreUrl(gameName: string): string {
+  const searchQuery = encodeURIComponent(gameName);
+  return `https://www.xbox.com/en-US/search?q=${searchQuery}`;
+}
+
+function getSteamUrl(gameName: string): string {
+  const searchQuery = encodeURIComponent(gameName);
+  return `https://store.steampowered.com/search/?term=${searchQuery}`;
+}
+
+// Edit Game Modal Component
+function EditGameModal({
+  game,
+  onClose,
+  onSave,
+  onDelete,
+}: {
+  game: AnalysisSummary;
+  onClose: () => void;
+  onSave: (id: number, update: AnalysisUpdate) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [formData, setFormData] = useState({
+    detected_game: game.detected_game || game.game_name || '',
+    primary_genre: game.primary_genre || '',
+    confidence: game.confidence || 'medium',
+    analysis_notes: '',
+  });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await onSave(game.id, formData);
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = () => {
+    onDelete(game.id);
+    onClose();
+  };
+
+  const gameName = game.detected_game || game.game_name;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content max-w-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 border-b border-dark-600">
+          <div>
+            <h2 className="text-xl font-bold text-white">Edit Classification</h2>
+            <p className="text-sm text-dark-300 mt-1">{gameName}</p>
+          </div>
+          <button onClick={onClose} className="p-2 text-dark-300 hover:text-white transition-colors rounded-lg hover:bg-dark-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* External Verification Links */}
+        <div className="px-6 py-4 bg-dark-700/50 border-b border-dark-600">
+          <p className="text-xs text-dark-400 mb-2">Verify this game's information:</p>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={getWikipediaUrl(gameName)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-dark-600 hover:bg-dark-500 text-white/80 hover:text-white rounded-lg text-sm transition-colors"
+            >
+              <Globe className="h-4 w-4" />
+              Wikipedia
+              <ExternalLink className="h-3 w-3 opacity-50" />
+            </a>
+            <a
+              href={getXboxStoreUrl(gameName)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#107C10]/20 hover:bg-[#107C10]/30 text-[#52B043] rounded-lg text-sm transition-colors"
+            >
+              <span className="font-bold text-xs">X</span>
+              Xbox Store
+              <ExternalLink className="h-3 w-3 opacity-50" />
+            </a>
+            <a
+              href={getSteamUrl(gameName)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg text-sm transition-colors"
+            >
+              Steam
+              <ExternalLink className="h-3 w-3 opacity-50" />
+            </a>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-dark-200 mb-2">
+                Game Name (Corrected)
+              </label>
+              <input
+                type="text"
+                value={formData.detected_game}
+                onChange={(e) => setFormData({ ...formData, detected_game: e.target.value })}
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-xbox-green/50 focus:border-xbox-green"
+                placeholder="Enter correct game name"
+              />
+              <p className="text-xs text-dark-400 mt-1">
+                Original: {game.game_name}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark-200 mb-2">
+                Primary Genre
+              </label>
+              <input
+                type="text"
+                value={formData.primary_genre}
+                onChange={(e) => setFormData({ ...formData, primary_genre: e.target.value })}
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-xbox-green/50 focus:border-xbox-green"
+                placeholder="e.g., Action RPG, Metroidvania, etc."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark-200 mb-2">
+                Confidence Level
+              </label>
+              <div className="flex gap-3">
+                {['high', 'medium', 'low'].map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, confidence: level })}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      formData.confidence === level
+                        ? level === 'high'
+                          ? 'bg-xbox-green text-white'
+                          : level === 'medium'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-red-500 text-white'
+                        : 'bg-dark-600 text-dark-300 hover:bg-dark-500'
+                    }`}
+                  >
+                    {level.charAt(0).toUpperCase() + level.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark-200 mb-2">
+                Notes (Optional)
+              </label>
+              <textarea
+                value={formData.analysis_notes}
+                onChange={(e) => setFormData({ ...formData, analysis_notes: e.target.value })}
+                rows={3}
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-xbox-green/50 focus:border-xbox-green resize-none"
+                placeholder="Add correction notes..."
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-6 border-t border-dark-600 bg-dark-700/50">
+            {!showDeleteConfirm ? (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-2 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-red-400">Delete this game?</span>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600"
+                >
+                  Yes, Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-3 py-1.5 bg-dark-600 text-white text-sm rounded-lg hover:bg-dark-500"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-dark-300 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-6 py-2 bg-xbox-green hover:bg-xbox-green/90 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                <Save className="h-4 w-4" />
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // Get reason why a game needs review
 function getReviewReason(game: AnalysisSummary): { reason: string; severity: 'warning' | 'info' } {
   if (game.confidence === 'low') {
@@ -163,7 +393,15 @@ function getReviewReason(game: AnalysisSummary): { reason: string; severity: 'wa
   return { reason: 'Flagged for quality review', severity: 'info' };
 }
 
-function ReviewPanel({ onClose, onSelectGame }: { onClose: () => void; onSelectGame: (id: number) => void }) {
+function ReviewPanel({
+  onClose,
+  onSelectGame,
+  onEditGame,
+}: {
+  onClose: () => void;
+  onSelectGame: (id: number) => void;
+  onEditGame: (game: AnalysisSummary) => void;
+}) {
   const { data: reviewGames, isLoading } = useQuery({
     queryKey: ['review-games'],
     queryFn: async () => {
@@ -219,21 +457,42 @@ function ReviewPanel({ onClose, onSelectGame }: { onClose: () => void; onSelectG
                   <div className="space-y-2">
                     {reviewGames.low.map((game) => {
                       const { reason } = getReviewReason(game);
+                      const gameName = game.detected_game || game.game_name;
                       return (
                         <div
                           key={game.id}
-                          onClick={() => onSelectGame(game.id)}
-                          className="flex items-center justify-between p-4 bg-red-500/5 rounded-xl border border-red-500/20 hover:border-red-500/40 hover:bg-red-500/10 cursor-pointer transition-all"
+                          className="flex items-center justify-between p-4 bg-red-500/5 rounded-xl border border-red-500/20 hover:border-red-500/40 hover:bg-red-500/10 transition-all"
                         >
-                          <div className="flex-1">
-                            <p className="font-medium text-white">{game.detected_game || game.game_name}</p>
+                          <div className="flex-1 cursor-pointer" onClick={() => onSelectGame(game.id)}>
+                            <p className="font-medium text-white">{gameName}</p>
                             <p className="text-xs text-dark-400 mt-1">{game.primary_genre} · {game.tag_count} tags</p>
                             <p className="text-xs text-red-300 mt-2 flex items-center gap-1">
                               <AlertTriangle className="h-3 w-3" />
                               {reason}
                             </p>
                           </div>
-                          <ChevronRight className="h-5 w-5 text-dark-400" />
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={getWikipediaUrl(gameName)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-2 text-dark-400 hover:text-white hover:bg-dark-600 rounded-lg transition-colors"
+                              title="Search Wikipedia"
+                            >
+                              <Globe className="h-4 w-4" />
+                            </a>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditGame(game);
+                              }}
+                              className="p-2 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg transition-colors"
+                              title="Edit classification"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -253,21 +512,42 @@ function ReviewPanel({ onClose, onSelectGame }: { onClose: () => void; onSelectG
                   <div className="space-y-2">
                     {reviewGames.medium.slice(0, 20).map((game) => {
                       const { reason } = getReviewReason(game);
+                      const gameName = game.detected_game || game.game_name;
                       return (
                         <div
                           key={game.id}
-                          onClick={() => onSelectGame(game.id)}
-                          className="flex items-center justify-between p-4 bg-amber-500/5 rounded-xl border border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10 cursor-pointer transition-all"
+                          className="flex items-center justify-between p-4 bg-amber-500/5 rounded-xl border border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10 transition-all"
                         >
-                          <div className="flex-1">
-                            <p className="font-medium text-white">{game.detected_game || game.game_name}</p>
+                          <div className="flex-1 cursor-pointer" onClick={() => onSelectGame(game.id)}>
+                            <p className="font-medium text-white">{gameName}</p>
                             <p className="text-xs text-dark-400 mt-1">{game.primary_genre} · {game.tag_count} tags</p>
                             <p className="text-xs text-amber-300 mt-2 flex items-center gap-1">
                               <AlertTriangle className="h-3 w-3" />
                               {reason}
                             </p>
                           </div>
-                          <ChevronRight className="h-5 w-5 text-dark-400" />
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={getWikipediaUrl(gameName)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-2 text-dark-400 hover:text-white hover:bg-dark-600 rounded-lg transition-colors"
+                              title="Search Wikipedia"
+                            >
+                              <Globe className="h-4 w-4" />
+                            </a>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditGame(game);
+                              }}
+                              className="p-2 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg transition-colors"
+                              title="Edit classification"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -338,6 +618,39 @@ export default function Dashboard() {
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
   const [xboxMockupGameId, setXboxMockupGameId] = useState<number | null>(null);
   const [showReviewPanel, setShowReviewPanel] = useState(false);
+  const [editingGame, setEditingGame] = useState<AnalysisSummary | null>(null);
+
+  const queryClient = useQueryClient();
+
+  // Mutation for updating a game
+  const updateMutation = useMutation({
+    mutationFn: ({ id, update }: { id: number; update: AnalysisUpdate }) => updateAnalysis(id, update),
+    onSuccess: () => {
+      // Invalidate relevant queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['review-games'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+      queryClient.invalidateQueries({ queryKey: ['popular-games'] });
+    },
+  });
+
+  // Mutation for deleting a game
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteAnalysis(id),
+    onSuccess: () => {
+      // Invalidate relevant queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['review-games'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+      queryClient.invalidateQueries({ queryKey: ['popular-games'] });
+    },
+  });
+
+  const handleSaveGame = async (id: number, update: AnalysisUpdate) => {
+    await updateMutation.mutateAsync({ id, update });
+  };
+
+  const handleDeleteGame = async (id: number) => {
+    await deleteMutation.mutateAsync(id);
+  };
 
   const { data: stats, isLoading, error } = useQuery<StatsResponse>({
     queryKey: ['stats'],
@@ -758,6 +1071,20 @@ export default function Dashboard() {
             setShowReviewPanel(false);
             setSelectedGameId(id);
           }}
+          onEditGame={(game) => {
+            setShowReviewPanel(false);
+            setEditingGame(game);
+          }}
+        />
+      )}
+
+      {/* Edit Game Modal */}
+      {editingGame && (
+        <EditGameModal
+          game={editingGame}
+          onClose={() => setEditingGame(null)}
+          onSave={handleSaveGame}
+          onDelete={handleDeleteGame}
         />
       )}
     </div>

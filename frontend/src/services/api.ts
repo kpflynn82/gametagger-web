@@ -161,6 +161,25 @@ export async function deleteAnalysis(id: number): Promise<void> {
   }
 }
 
+export interface AnalysisUpdate {
+  detected_game?: string;
+  primary_genre?: string;
+  confidence?: string;
+  analysis_notes?: string;
+}
+
+export async function updateAnalysis(id: number, update: AnalysisUpdate): Promise<GameAnalysis> {
+  const response = await fetch(`${API_BASE}/analysis/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(update),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to update analysis: ${response.statusText}`);
+  }
+  return response.json();
+}
+
 export interface PopularGamesResponse {
   items: AnalysisSummary[];
 }

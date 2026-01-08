@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 from app.database import get_db
 from app.models import Analysis
-from app.schemas import AnalysisSummary, AnalysisDetail, HistoryResponse
+from app.schemas import AnalysisSummary, AnalysisDetail, HistoryResponse, AnalysisUpdate
 
 router = APIRouter(prefix="/api", tags=["history"])
 
@@ -120,6 +120,49 @@ async def get_analysis(analysis_id: int, db: AsyncSession = Depends(get_db)):
 
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
+
+    return AnalysisDetail(
+        id=analysis.id,
+        job_id=analysis.job_id,
+        game_name=analysis.game_name,
+        detected_game=analysis.detected_game,
+        confidence=analysis.confidence,
+        primary_genre=analysis.primary_genre,
+        analysis_notes=analysis.analysis_notes,
+        tags=analysis.tags or {},
+        sources_used=analysis.sources_used or [],
+        source_data=analysis.source_data,
+        created_at=analysis.created_at,
+        processing_time_seconds=analysis.processing_time_seconds
+    )
+
+
+@router.put("/analysis/{analysis_id}", response_model=AnalysisDetail)
+async def update_analysis(
+    analysis_id: int,
+    update_data: AnalysisUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update an analysis (for manual corrections)."""
+    query = select(Analysis).where(Analysis.id == analysis_id)
+    result = await db.execute(query)
+    analysis = result.scalar_one_or_none()
+
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    # Update only provided fields
+    if update_data.detected_game is not None:
+        analysis.detected_game = update_data.detected_game
+    if update_data.primary_genre is not None:
+        analysis.primary_genre = update_data.primary_genre
+    if update_data.confidence is not None:
+        analysis.confidence = update_data.confidence
+    if update_data.analysis_notes is not None:
+        analysis.analysis_notes = update_data.analysis_notes
+
+    await db.commit()
+    await db.refresh(analysis)
 
     return AnalysisDetail(
         id=analysis.id,

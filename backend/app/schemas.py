@@ -79,6 +79,14 @@ class AnalysisDetail(BaseModel):
     processing_time_seconds: Optional[float]
 
 
+class AnalysisUpdate(BaseModel):
+    """Request to update an analysis."""
+    detected_game: Optional[str] = None
+    primary_genre: Optional[str] = None
+    confidence: Optional[str] = None
+    analysis_notes: Optional[str] = None
+
+
 class HistoryResponse(BaseModel):
     """Paginated history response."""
     items: list[AnalysisSummary]
