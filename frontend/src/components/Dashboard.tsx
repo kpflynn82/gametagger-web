@@ -206,12 +206,16 @@ function EditGameModal({
   onSave,
   onDelete,
   onDeepAnalysis,
+  relatedDeepAnalysis,
+  onReplaceWithDeep,
 }: {
   game: AnalysisSummary;
   onClose: () => void;
   onSave: (id: number, update: AnalysisUpdate) => void;
   onDelete: (id: number) => void;
   onDeepAnalysis: (gameName: string) => void;
+  relatedDeepAnalysis?: AnalysisSummary | null;
+  onReplaceWithDeep?: (originalId: number, deepId: number) => void;
 }) {
   const [formData, setFormData] = useState({
     detected_game: game.detected_game || game.game_name || '',
@@ -222,6 +226,9 @@ function EditGameModal({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRequestingDeepAnalysis, setIsRequestingDeepAnalysis] = useState(false);
+  const [showReplaceConfirm, setShowReplaceConfirm] = useState(false);
+
+  const isDeepAnalysis = game.quality === 'deep';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -245,6 +252,13 @@ function EditGameModal({
     onClose();
   };
 
+  const handleReplaceWithDeep = () => {
+    if (relatedDeepAnalysis && onReplaceWithDeep) {
+      onReplaceWithDeep(game.id, relatedDeepAnalysis.id);
+      onClose();
+    }
+  };
+
   const gameName = game.detected_game || game.game_name;
 
   return (
@@ -252,13 +266,68 @@ function EditGameModal({
       <div className="modal-content max-w-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-dark-600">
           <div>
-            <h2 className="text-xl font-bold text-white">Edit Classification</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-bold text-white">Edit Classification</h2>
+              {isDeepAnalysis && (
+                <span className="flex items-center gap-1.5 px-2 py-1 bg-purple-500/20 text-purple-300 text-xs font-semibold rounded-lg border border-purple-500/30">
+                  <Sparkles className="h-3 w-3" />
+                  Deep Analysis
+                </span>
+              )}
+            </div>
             <p className="text-sm text-dark-300 mt-1">{gameName}</p>
           </div>
           <button onClick={onClose} className="p-2 text-dark-300 hover:text-white transition-colors rounded-lg hover:bg-dark-600">
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {/* Deep Analysis Available Banner */}
+        {relatedDeepAnalysis && !isDeepAnalysis && (
+          <div className="px-6 py-4 bg-purple-500/10 border-b border-purple-500/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-500/20 rounded-lg">
+                  <Sparkles className="h-4 w-4 text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">Deep Analysis Available</p>
+                  <p className="text-xs text-purple-300">
+                    {relatedDeepAnalysis.confidence} confidence · {relatedDeepAnalysis.primary_genre} · {relatedDeepAnalysis.tag_count} tags
+                  </p>
+                </div>
+              </div>
+              {!showReplaceConfirm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowReplaceConfirm(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-sm font-medium rounded-lg transition-colors border border-purple-500/30"
+                >
+                  <ArrowUpRight className="h-4 w-4" />
+                  Replace with Deep
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-purple-300">Replace original?</span>
+                  <button
+                    type="button"
+                    onClick={handleReplaceWithDeep}
+                    className="px-3 py-1.5 bg-purple-500 text-white text-sm rounded-lg hover:bg-purple-600"
+                  >
+                    Yes, Replace
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowReplaceConfirm(false)}
+                    className="px-3 py-1.5 bg-dark-600 text-white text-sm rounded-lg hover:bg-dark-500"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* External Verification Links */}
         <div className="px-6 py-4 bg-dark-700/50 border-b border-dark-600">
@@ -911,6 +980,33 @@ export default function Dashboard() {
     }
   };
 
+  // Replace original classification with deep analysis (deletes original, keeps deep)
+  const handleReplaceWithDeep = async (originalId: number, _deepId: number) => {
+    try {
+      // Delete the original record
+      await deleteMutation.mutateAsync(originalId);
+      // Refresh all relevant queries
+      queryClient.invalidateQueries({ queryKey: ['review-games'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+      queryClient.invalidateQueries({ queryKey: ['popular-games'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-history'] });
+    } catch (error) {
+      alert(`Failed to replace: ${error}`);
+    }
+  };
+
+  // Find related deep analysis for a game (used in edit modal)
+  const findRelatedDeepAnalysis = (game: AnalysisSummary): AnalysisSummary | null => {
+    if (!recentHistory?.items || game.quality === 'deep') return null;
+
+    const gameName = (game.detected_game || game.game_name).toLowerCase();
+    return recentHistory.items.find(item =>
+      item.quality === 'deep' &&
+      item.id !== game.id &&
+      (item.detected_game || item.game_name).toLowerCase() === gameName
+    ) || null;
+  };
+
   const { data: stats, isLoading, error } = useQuery<StatsResponse>({
     queryKey: ['stats'],
     queryFn: getStats,
@@ -1410,6 +1506,8 @@ export default function Dashboard() {
           onSave={handleSaveGame}
           onDelete={handleDeleteGame}
           onDeepAnalysis={handleDeepAnalysis}
+          relatedDeepAnalysis={findRelatedDeepAnalysis(editingGame)}
+          onReplaceWithDeep={handleReplaceWithDeep}
         />
       )}
 

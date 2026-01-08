@@ -16,13 +16,7 @@ class Settings(BaseSettings):
 
     # Security
     secret_key: str = "dev-secret-key-change-in-production"
-    cors_origins: list[str] = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://genometagger.vercel.app",
-        "https://frontend-rho-mocha-32.vercel.app",
-        "https://frontend-kpflynn82s-projects.vercel.app",
-    ]
+    cors_origins: list[str] = ["*"]  # Allow all origins for now
 
     # Rate limiting
     rate_limit_per_minute: int = 10
