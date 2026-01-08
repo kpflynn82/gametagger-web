@@ -296,26 +296,6 @@ function EditGameModal({
           </div>
         </div>
 
-        {/* Deep Analysis Option */}
-        <div className="px-6 py-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-b border-purple-500/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-white">Need higher accuracy?</p>
-              <p className="text-xs text-dark-400 mt-0.5">
-                Re-analyze with Claude Opus + all data sources (YouTube, Steam, Xbox)
-              </p>
-            </div>
-            <button
-              onClick={handleDeepAnalysis}
-              disabled={isRequestingDeepAnalysis}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50"
-            >
-              <Zap className="h-4 w-4" />
-              {isRequestingDeepAnalysis ? 'Starting...' : 'Deep Analysis'}
-            </button>
-          </div>
-        </div>
-
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-4">
             <div>
@@ -424,6 +404,16 @@ function EditGameModal({
                 className="px-4 py-2 text-dark-300 hover:text-white transition-colors"
               >
                 Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeepAnalysis}
+                disabled={isRequestingDeepAnalysis}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50"
+                title="Re-analyze with Claude Opus + all data sources"
+              >
+                <Zap className="h-4 w-4" />
+                {isRequestingDeepAnalysis ? 'Starting...' : 'Deep Analysis'}
               </button>
               <button
                 type="submit"
