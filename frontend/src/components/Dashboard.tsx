@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { Target, Gamepad2, Trophy, X, ArrowUpRight, Zap, ExternalLink, CheckCircle, DollarSign, Layers, ShieldCheck } from 'lucide-react';
-import { getStats, getPopularGames, getAnalysis, type StatsResponse, type PopularGamesResponse } from '../services/api';
+import { Target, Gamepad2, Trophy, X, ArrowUpRight, Zap, ExternalLink, CheckCircle, DollarSign, Layers, ShieldCheck, AlertTriangle, ChevronRight } from 'lucide-react';
+import { getStats, getPopularGames, getAnalysis, getHistory, type StatsResponse, type PopularGamesResponse, type AnalysisSummary } from '../services/api';
 import XboxStoreMockup from './XboxStoreMockup';
 
 // Tag category configuration
@@ -146,6 +146,161 @@ function GameDetailModal({ gameId, onClose, onOpenXboxMockup }: { gameId: number
   );
 }
 
+// Get reason why a game needs review
+function getReviewReason(game: AnalysisSummary): { reason: string; severity: 'warning' | 'info' } {
+  if (game.confidence === 'low') {
+    return { reason: 'Low AI confidence - insufficient data or ambiguous genre', severity: 'warning' };
+  }
+  if (game.confidence === 'medium') {
+    if (game.tag_count < 10) {
+      return { reason: 'Medium confidence with sparse tagging', severity: 'info' };
+    }
+    if (!game.sources_used || game.sources_used.length < 2) {
+      return { reason: 'Medium confidence - limited data sources', severity: 'info' };
+    }
+    return { reason: 'Medium confidence - may benefit from human verification', severity: 'info' };
+  }
+  return { reason: 'Flagged for quality review', severity: 'info' };
+}
+
+function ReviewPanel({ onClose, onSelectGame }: { onClose: () => void; onSelectGame: (id: number) => void }) {
+  const { data: reviewGames, isLoading } = useQuery({
+    queryKey: ['review-games'],
+    queryFn: async () => {
+      // Fetch medium and low confidence games
+      const [mediumRes, lowRes] = await Promise.all([
+        getHistory({ confidence: 'medium', limit: 50 }),
+        getHistory({ confidence: 'low', limit: 50 }),
+      ]);
+      return {
+        medium: mediumRes.items,
+        low: lowRes.items,
+        total: mediumRes.total + lowRes.total,
+      };
+    },
+  });
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content max-w-3xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 border-b border-dark-600">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20">
+              <AlertTriangle className="h-5 w-5 text-amber-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">Games Needing Review</h2>
+              <p className="text-sm text-dark-300">
+                {reviewGames ? `${reviewGames.total} games flagged for manual review` : 'Loading...'}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 text-dark-300 hover:text-white transition-colors rounded-lg hover:bg-dark-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto max-h-[60vh]">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="loading-spinner h-8 w-8"></div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Low Confidence - Requires Review */}
+              {reviewGames?.low && reviewGames.low.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                    <h3 className="text-sm font-semibold text-red-400 uppercase tracking-wide">
+                      Low Confidence ({reviewGames.low.length})
+                    </h3>
+                  </div>
+                  <div className="space-y-2">
+                    {reviewGames.low.map((game) => {
+                      const { reason } = getReviewReason(game);
+                      return (
+                        <div
+                          key={game.id}
+                          onClick={() => onSelectGame(game.id)}
+                          className="flex items-center justify-between p-4 bg-red-500/5 rounded-xl border border-red-500/20 hover:border-red-500/40 hover:bg-red-500/10 cursor-pointer transition-all"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-white">{game.detected_game || game.game_name}</p>
+                            <p className="text-xs text-dark-400 mt-1">{game.primary_genre} · {game.tag_count} tags</p>
+                            <p className="text-xs text-red-300 mt-2 flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3" />
+                              {reason}
+                            </p>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-dark-400" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Medium Confidence - Review Suggested */}
+              {reviewGames?.medium && reviewGames.medium.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                    <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wide">
+                      Medium Confidence ({reviewGames.medium.length})
+                    </h3>
+                  </div>
+                  <div className="space-y-2">
+                    {reviewGames.medium.slice(0, 20).map((game) => {
+                      const { reason } = getReviewReason(game);
+                      return (
+                        <div
+                          key={game.id}
+                          onClick={() => onSelectGame(game.id)}
+                          className="flex items-center justify-between p-4 bg-amber-500/5 rounded-xl border border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10 cursor-pointer transition-all"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-white">{game.detected_game || game.game_name}</p>
+                            <p className="text-xs text-dark-400 mt-1">{game.primary_genre} · {game.tag_count} tags</p>
+                            <p className="text-xs text-amber-300 mt-2 flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3" />
+                              {reason}
+                            </p>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-dark-400" />
+                        </div>
+                      );
+                    })}
+                    {reviewGames.medium.length > 20 && (
+                      <p className="text-center text-dark-400 text-sm py-2">
+                        +{reviewGames.medium.length - 20} more games...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {(!reviewGames?.low?.length && !reviewGames?.medium?.length) && (
+                <div className="text-center py-12">
+                  <CheckCircle className="h-12 w-12 text-xbox-green mx-auto mb-4" />
+                  <p className="text-white font-medium">All classifications look good!</p>
+                  <p className="text-dark-400 text-sm mt-1">No games currently flagged for review</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t border-dark-600 bg-dark-700/50">
+          <p className="text-xs text-dark-400 text-center">
+            Click any game to view details and make corrections
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StatCard({ title, value, icon: Icon, subtitle, trend }: {
   title: string;
   value: string | number;
@@ -182,6 +337,7 @@ function StatCard({ title, value, icon: Icon, subtitle, trend }: {
 export default function Dashboard() {
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
   const [xboxMockupGameId, setXboxMockupGameId] = useState<number | null>(null);
+  const [showReviewPanel, setShowReviewPanel] = useState(false);
 
   const { data: stats, isLoading, error } = useQuery<StatsResponse>({
     queryKey: ['stats'],
@@ -303,10 +459,16 @@ export default function Dashboard() {
                 <p className="text-2xl font-bold text-xbox-green">{Math.round(stats.total_analyses * 0.89)}</p>
                 <p className="text-xs text-dark-300">Production Ready</p>
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-amber-400">{Math.round(stats.total_analyses * 0.09)}</p>
-                <p className="text-xs text-dark-300">Review Suggested</p>
-              </div>
+              <button
+                onClick={() => setShowReviewPanel(true)}
+                className="text-center p-2 -m-2 rounded-lg hover:bg-amber-500/10 transition-colors group cursor-pointer"
+              >
+                <p className="text-2xl font-bold text-amber-400 group-hover:text-amber-300">{Math.round(stats.total_analyses * 0.09)}</p>
+                <p className="text-xs text-dark-300 group-hover:text-amber-400 flex items-center justify-center gap-1">
+                  Review Suggested
+                  <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </p>
+              </button>
               <div className="text-center">
                 <p className="text-2xl font-bold text-dark-400">{Math.round(stats.total_analyses * 0.02)}</p>
                 <p className="text-xs text-dark-300">Needs Data</p>
@@ -585,6 +747,17 @@ export default function Dashboard() {
         <XboxStoreMockup
           gameId={xboxMockupGameId}
           onClose={() => setXboxMockupGameId(null)}
+        />
+      )}
+
+      {/* Review Panel */}
+      {showReviewPanel && (
+        <ReviewPanel
+          onClose={() => setShowReviewPanel(false)}
+          onSelectGame={(id) => {
+            setShowReviewPanel(false);
+            setSelectedGameId(id);
+          }}
         />
       )}
     </div>
