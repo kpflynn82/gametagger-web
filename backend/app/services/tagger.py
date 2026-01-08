@@ -487,11 +487,13 @@ class AsyncGameTagger:
         context_parts = []
 
         # Select model based on quality
+        # Standard uses Haiku for cost efficiency (~60x cheaper than Sonnet)
+        # Deep uses Opus for highest accuracy
         if quality == "deep":
             model = "claude-opus-4-20250514"
             max_tokens = 4000
         else:
-            model = "claude-sonnet-4-20250514"
+            model = "claude-3-5-haiku-20241022"
             max_tokens = 2000
 
         for src in sources:
@@ -642,7 +644,7 @@ class AsyncGameTagger:
         if not successful:
             # Try to proceed with just Claude's knowledge if no sources work
             if progress_callback:
-                model_name = "Claude Opus" if quality == "deep" else "Claude Sonnet"
+                model_name = "Claude Opus" if quality == "deep" else "Claude Haiku"
                 await progress_callback('analysis', f'processing with {model_name} (no external sources)')
             result = await self.analyze_with_claude(game_name, [], quality)
             result['game_name'] = game_name
@@ -655,7 +657,7 @@ class AsyncGameTagger:
 
         # Analyze with Claude
         if progress_callback:
-            model_name = "Claude Opus" if quality == "deep" else "Claude Sonnet"
+            model_name = "Claude Opus" if quality == "deep" else "Claude Haiku"
             await progress_callback('analysis', f'processing with {model_name}')
 
         result = await self.analyze_with_claude(game_name, source_data, quality)

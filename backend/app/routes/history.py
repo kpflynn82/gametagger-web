@@ -94,6 +94,7 @@ async def get_history(
             confidence=analysis.confidence,
             primary_genre=analysis.primary_genre,
             sources_used=analysis.sources_used or [],
+            quality=getattr(analysis, 'quality', 'standard') or 'standard',
             created_at=analysis.created_at,
             tag_count=tag_count,
             engagement_count=engagement_count,
@@ -132,6 +133,7 @@ async def get_analysis(analysis_id: int, db: AsyncSession = Depends(get_db)):
         tags=analysis.tags or {},
         sources_used=analysis.sources_used or [],
         source_data=analysis.source_data,
+        quality=getattr(analysis, 'quality', 'standard') or 'standard',
         created_at=analysis.created_at,
         processing_time_seconds=analysis.processing_time_seconds
     )
@@ -175,6 +177,7 @@ async def update_analysis(
         tags=analysis.tags or {},
         sources_used=analysis.sources_used or [],
         source_data=analysis.source_data,
+        quality=getattr(analysis, 'quality', 'standard') or 'standard',
         created_at=analysis.created_at,
         processing_time_seconds=analysis.processing_time_seconds
     )

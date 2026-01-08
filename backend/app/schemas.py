@@ -57,6 +57,7 @@ class AnalysisSummary(BaseModel):
     confidence: Optional[str]
     primary_genre: Optional[str]
     sources_used: list[str]
+    quality: Optional[str] = "standard"  # 'standard' or 'deep'
     created_at: datetime
     tag_count: int
     # Nitrogen tag counts
@@ -77,6 +78,7 @@ class AnalysisDetail(BaseModel):
     tags: dict
     sources_used: list[str]
     source_data: Optional[dict]
+    quality: Optional[str] = "standard"  # 'standard' or 'deep'
     created_at: datetime
     processing_time_seconds: Optional[float]
 

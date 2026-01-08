@@ -105,6 +105,7 @@ async def save_job_result(job_id: str, db: AsyncSession = Depends(get_db)):
         tags=tags,
         sources_used=result.get("sources_used", []),
         source_data=result.get("source_data"),
+        quality=job.get("quality", "standard"),
         processing_time_seconds=job.get("processing_time_seconds")
     )
 

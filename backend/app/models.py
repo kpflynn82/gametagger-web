@@ -25,6 +25,7 @@ class Analysis(Base):
     source_data = Column(JSON)
 
     # Metadata
+    quality = Column(String(20), default='standard')  # 'standard' or 'deep'
     created_at = Column(DateTime, server_default=func.now())
     processing_time_seconds = Column(Float)
 
