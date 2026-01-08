@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { Target, Gamepad2, Trophy, X, ArrowUpRight, Zap, ExternalLink, CheckCircle, DollarSign, Layers, ShieldCheck, AlertTriangle, ChevronRight, Pencil, Trash2, Globe, Save } from 'lucide-react';
-import { getStats, getPopularGames, getAnalysis, getHistory, updateAnalysis, deleteAnalysis, startTagging, type StatsResponse, type PopularGamesResponse, type AnalysisSummary, type AnalysisUpdate } from '../services/api';
+import { Target, Gamepad2, Trophy, X, ArrowUpRight, Zap, ExternalLink, CheckCircle, DollarSign, Layers, ShieldCheck, AlertTriangle, ChevronRight, Pencil, Trash2, Globe, Save, Loader2, Clock, Sparkles } from 'lucide-react';
+import { getStats, getPopularGames, getAnalysis, getHistory, updateAnalysis, deleteAnalysis, startTagging, getJobStatus, saveJobResult, type StatsResponse, type PopularGamesResponse, type AnalysisSummary, type AnalysisUpdate } from '../services/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import XboxStoreMockup from './XboxStoreMockup';
 
@@ -431,6 +431,110 @@ function EditGameModal({
   );
 }
 
+// Deep Analysis Job Tracker
+interface DeepAnalysisJob {
+  jobId: string;
+  gameName: string;
+  status: 'processing' | 'completed' | 'failed';
+  startedAt: string; // ISO string for localStorage persistence
+  analysisId?: number;
+}
+
+// localStorage keys
+const PENDING_JOBS_KEY = 'gametagger_pending_deep_jobs';
+
+// Helper to persist jobs
+function savePendingJob(job: DeepAnalysisJob) {
+  const jobs = getPendingJobs();
+  jobs[job.jobId] = job;
+  localStorage.setItem(PENDING_JOBS_KEY, JSON.stringify(jobs));
+}
+
+function getPendingJobs(): Record<string, DeepAnalysisJob> {
+  try {
+    const stored = localStorage.getItem(PENDING_JOBS_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+function removePendingJob(jobId: string) {
+  const jobs = getPendingJobs();
+  delete jobs[jobId];
+  localStorage.setItem(PENDING_JOBS_KEY, JSON.stringify(jobs));
+}
+
+function getProcessingJobs(): DeepAnalysisJob[] {
+  const jobs = getPendingJobs();
+  return Object.values(jobs).filter(j => j.status === 'processing');
+}
+
+// Toast Notification Component
+function DeepAnalysisNotification({
+  job,
+  onDismiss,
+  onViewResults,
+}: {
+  job: DeepAnalysisJob;
+  onDismiss: () => void;
+  onViewResults: () => void;
+}) {
+  return (
+    <div className="fixed bottom-4 right-4 z-50 animate-slide-up">
+      <div className={`p-4 rounded-xl shadow-2xl border max-w-sm ${
+        job.status === 'completed'
+          ? 'bg-xbox-green/20 border-xbox-green/40'
+          : job.status === 'failed'
+          ? 'bg-red-500/20 border-red-500/40'
+          : 'bg-purple-500/20 border-purple-500/40'
+      }`}>
+        <div className="flex items-start gap-3">
+          <div className={`p-2 rounded-lg ${
+            job.status === 'completed'
+              ? 'bg-xbox-green/20'
+              : job.status === 'failed'
+              ? 'bg-red-500/20'
+              : 'bg-purple-500/20'
+          }`}>
+            {job.status === 'processing' ? (
+              <Loader2 className="h-5 w-5 text-purple-400 animate-spin" />
+            ) : job.status === 'completed' ? (
+              <CheckCircle className="h-5 w-5 text-xbox-green" />
+            ) : (
+              <AlertTriangle className="h-5 w-5 text-red-400" />
+            )}
+          </div>
+          <div className="flex-1">
+            <p className="font-medium text-white text-sm">
+              {job.status === 'processing'
+                ? 'Deep Analysis in Progress'
+                : job.status === 'completed'
+                ? 'Deep Analysis Complete!'
+                : 'Deep Analysis Failed'}
+            </p>
+            <p className="text-xs text-dark-300 mt-0.5">{job.gameName}</p>
+            {job.status === 'completed' && (
+              <button
+                onClick={onViewResults}
+                className="mt-2 text-xs text-xbox-green hover:text-xbox-green/80 font-medium flex items-center gap-1"
+              >
+                View Results <ArrowUpRight className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+          <button
+            onClick={onDismiss}
+            className="text-dark-400 hover:text-white transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Get reason why a game needs review
 function getReviewReason(game: AnalysisSummary): { reason: string; severity: 'warning' | 'info' } {
   if (game.confidence === 'low') {
@@ -513,13 +617,21 @@ function ReviewPanel({
                     {reviewGames.low.map((game) => {
                       const { reason } = getReviewReason(game);
                       const gameName = game.detected_game || game.game_name;
+                      const isDeepAnalyzed = game.quality === 'deep';
                       return (
                         <div
                           key={game.id}
                           className="flex items-center justify-between p-4 bg-red-500/5 rounded-xl border border-red-500/20 hover:border-red-500/40 hover:bg-red-500/10 transition-all"
                         >
                           <div className="flex-1 cursor-pointer" onClick={() => onSelectGame(game.id)}>
-                            <p className="font-medium text-white">{gameName}</p>
+                            <p className="font-medium text-white flex items-center gap-2">
+                              {gameName}
+                              {isDeepAnalyzed && (
+                                <span className="px-1.5 py-0.5 bg-purple-500/20 text-purple-300 text-[10px] font-semibold rounded uppercase border border-purple-500/30">
+                                  Deep
+                                </span>
+                              )}
+                            </p>
                             <p className="text-xs text-dark-400 mt-1">{game.primary_genre} · {game.tag_count} tags</p>
                             <p className="text-xs text-red-300 mt-2 flex items-center gap-1">
                               <AlertTriangle className="h-3 w-3" />
@@ -568,13 +680,21 @@ function ReviewPanel({
                     {reviewGames.medium.slice(0, 20).map((game) => {
                       const { reason } = getReviewReason(game);
                       const gameName = game.detected_game || game.game_name;
+                      const isDeepAnalyzed = game.quality === 'deep';
                       return (
                         <div
                           key={game.id}
                           className="flex items-center justify-between p-4 bg-amber-500/5 rounded-xl border border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10 transition-all"
                         >
                           <div className="flex-1 cursor-pointer" onClick={() => onSelectGame(game.id)}>
-                            <p className="font-medium text-white">{gameName}</p>
+                            <p className="font-medium text-white flex items-center gap-2">
+                              {gameName}
+                              {isDeepAnalyzed && (
+                                <span className="px-1.5 py-0.5 bg-purple-500/20 text-purple-300 text-[10px] font-semibold rounded uppercase border border-purple-500/30">
+                                  Deep
+                                </span>
+                              )}
+                            </p>
                             <p className="text-xs text-dark-400 mt-1">{game.primary_genre} · {game.tag_count} tags</p>
                             <p className="text-xs text-amber-300 mt-2 flex items-center gap-1">
                               <AlertTriangle className="h-3 w-3" />
@@ -674,8 +794,68 @@ export default function Dashboard() {
   const [xboxMockupGameId, setXboxMockupGameId] = useState<number | null>(null);
   const [showReviewPanel, setShowReviewPanel] = useState(false);
   const [editingGame, setEditingGame] = useState<AnalysisSummary | null>(null);
+  const [deepAnalysisJobs, setDeepAnalysisJobs] = useState<DeepAnalysisJob[]>([]);
+  const [completedJob, setCompletedJob] = useState<DeepAnalysisJob | null>(null);
 
   const queryClient = useQueryClient();
+
+  // On mount, restore any pending jobs from localStorage
+  useEffect(() => {
+    const pendingJobs = getProcessingJobs();
+    if (pendingJobs.length > 0) {
+      setDeepAnalysisJobs(pendingJobs);
+    }
+  }, []);
+
+  // Poll for all pending deep analysis jobs
+  useEffect(() => {
+    const processingJobs = deepAnalysisJobs.filter(j => j.status === 'processing');
+    if (processingJobs.length === 0) return;
+
+    const pollInterval = setInterval(async () => {
+      for (const job of processingJobs) {
+        try {
+          const status = await getJobStatus(job.jobId);
+
+          if (status.status === 'completed') {
+            // Save the result and get the analysis ID
+            try {
+              const saveResult = await saveJobResult(job.jobId);
+              const completedJobData = { ...job, status: 'completed' as const, analysisId: saveResult.analysis_id };
+
+              // Update state
+              setDeepAnalysisJobs(prev => prev.map(j =>
+                j.jobId === job.jobId ? completedJobData : j
+              ));
+              setCompletedJob(completedJobData);
+
+              // Update localStorage
+              savePendingJob(completedJobData);
+
+              // Refresh the data
+              queryClient.invalidateQueries({ queryKey: ['review-games'] });
+              queryClient.invalidateQueries({ queryKey: ['stats'] });
+              queryClient.invalidateQueries({ queryKey: ['popular-games'] });
+            } catch {
+              // Still mark as completed even if save fails
+              setDeepAnalysisJobs(prev => prev.map(j =>
+                j.jobId === job.jobId ? { ...j, status: 'completed' as const } : j
+              ));
+            }
+          } else if (status.status === 'failed') {
+            setDeepAnalysisJobs(prev => prev.map(j =>
+              j.jobId === job.jobId ? { ...j, status: 'failed' as const } : j
+            ));
+            removePendingJob(job.jobId);
+          }
+        } catch (error) {
+          console.error('Error polling job status:', error);
+        }
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [deepAnalysisJobs, queryClient]);
 
   // Mutation for updating a game
   const updateMutation = useMutation({
@@ -715,8 +895,17 @@ export default function Dashboard() {
         sources: ['steam', 'xbox', 'youtube'],
         quality: 'deep',
       });
-      // Show a notification or navigate to the job status
-      alert(`Deep analysis started for "${gameName}". Job ID: ${response.job_id}\n\nThis uses Claude Opus and may take a few minutes. Check the main tagging page for status.`);
+      // Create job object
+      const newJob: DeepAnalysisJob = {
+        jobId: response.job_id,
+        gameName: gameName,
+        status: 'processing',
+        startedAt: new Date().toISOString(),
+      };
+      // Persist to localStorage
+      savePendingJob(newJob);
+      // Add to state
+      setDeepAnalysisJobs(prev => [...prev, newJob]);
     } catch (error) {
       alert(`Failed to start deep analysis: ${error}`);
     }
@@ -731,6 +920,13 @@ export default function Dashboard() {
   const { data: popularGames } = useQuery<PopularGamesResponse>({
     queryKey: ['popular-games'],
     queryFn: () => getPopularGames(10),
+  });
+
+  // Fetch most recent classifications (includes quality field)
+  const { data: recentHistory } = useQuery({
+    queryKey: ['recent-history'],
+    queryFn: () => getHistory({ limit: 10 }),
+    refetchInterval: 15000, // Refresh every 15 seconds to catch new analyses
   });
 
   if (isLoading) {
@@ -1020,6 +1216,66 @@ export default function Dashboard() {
         </>
       )}
 
+      {/* Most Recent Classifications */}
+      {recentHistory && recentHistory.items.length > 0 && (
+        <div className="glass-card p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+              <Clock className="h-5 w-5 text-blue-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Most Recent Classifications</h3>
+              <p className="text-sm text-dark-300">Latest analyses including deep re-tags</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {recentHistory.items.map((game) => {
+              const isDeepAnalysis = game.quality === 'deep';
+              const gameName = game.detected_game || game.game_name;
+              return (
+                <div
+                  key={game.id}
+                  onClick={() => setSelectedGameId(game.id)}
+                  className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
+                    isDeepAnalysis
+                      ? 'bg-purple-500/5 border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/10'
+                      : 'bg-dark-700/50 border-dark-600 hover:border-xbox-green/30 hover:bg-dark-600/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {isDeepAnalysis ? (
+                      <div className="p-2 bg-purple-500/20 rounded-lg">
+                        <Sparkles className="h-4 w-4 text-purple-400" />
+                      </div>
+                    ) : (
+                      <div className="p-2 bg-xbox-green/10 rounded-lg">
+                        <Zap className="h-4 w-4 text-xbox-green" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium text-white flex items-center gap-2">
+                        {gameName}
+                        {isDeepAnalysis && (
+                          <span className="px-1.5 py-0.5 bg-purple-500/20 text-purple-300 text-[10px] font-semibold rounded uppercase border border-purple-500/30">
+                            Deep Analysis
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-dark-400 mt-0.5">
+                        {game.primary_genre} · {game.tag_count} tags · {new Date(game.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ConfidenceBadge confidence={game.confidence || 'medium'} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Featured Classifications */}
       {popularGames && popularGames.items.length > 0 && (
         <div className="glass-card p-6">
@@ -1154,6 +1410,38 @@ export default function Dashboard() {
           onSave={handleSaveGame}
           onDelete={handleDeleteGame}
           onDeepAnalysis={handleDeepAnalysis}
+        />
+      )}
+
+      {/* Deep Analysis Notifications */}
+      {/* Show notification for any processing jobs */}
+      {deepAnalysisJobs.filter(j => j.status === 'processing').map(job => (
+        <DeepAnalysisNotification
+          key={job.jobId}
+          job={job}
+          onDismiss={() => {
+            setDeepAnalysisJobs(prev => prev.filter(j => j.jobId !== job.jobId));
+            removePendingJob(job.jobId);
+          }}
+          onViewResults={() => {}}
+        />
+      ))}
+
+      {/* Show notification for completed job */}
+      {completedJob && (
+        <DeepAnalysisNotification
+          job={completedJob}
+          onDismiss={() => {
+            setCompletedJob(null);
+            removePendingJob(completedJob.jobId);
+          }}
+          onViewResults={() => {
+            if (completedJob.analysisId) {
+              setSelectedGameId(completedJob.analysisId);
+            }
+            setCompletedJob(null);
+            removePendingJob(completedJob.jobId);
+          }}
         />
       )}
     </div>

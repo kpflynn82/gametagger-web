@@ -54,6 +54,7 @@ export interface AnalysisSummary {
   confidence?: string;
   primary_genre?: string;
   sources_used: string[];
+  quality?: 'standard' | 'deep';
   created_at: string;
   tag_count: number;
   // Nitrogen tag counts
