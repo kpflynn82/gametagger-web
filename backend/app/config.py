@@ -20,6 +20,8 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://localhost:3000",
         "https://genometagger.vercel.app",
+        "https://frontend-rho-mocha-32.vercel.app",
+        "https://frontend-kpflynn82s-projects.vercel.app",
     ]
 
     # Rate limiting
