@@ -9,12 +9,14 @@ class TagRequest(BaseModel):
     """Request to start a game tagging job."""
     game_name: str = Field(..., min_length=1, max_length=255)
     sources: list[str] = Field(default=["steam", "xbox", "youtube"])
+    quality: str = Field(default="standard", pattern="^(standard|deep)$")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "game_name": "Elden Ring",
-                "sources": ["steam", "xbox", "youtube"]
+                "sources": ["steam", "xbox", "youtube"],
+                "quality": "standard"
             }
         }
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { Target, Gamepad2, Trophy, X, ArrowUpRight, Zap, ExternalLink, CheckCircle, DollarSign, Layers, ShieldCheck, AlertTriangle, ChevronRight, Pencil, Trash2, Globe, Save } from 'lucide-react';
-import { getStats, getPopularGames, getAnalysis, getHistory, updateAnalysis, deleteAnalysis, type StatsResponse, type PopularGamesResponse, type AnalysisSummary, type AnalysisUpdate } from '../services/api';
+import { getStats, getPopularGames, getAnalysis, getHistory, updateAnalysis, deleteAnalysis, startTagging, type StatsResponse, type PopularGamesResponse, type AnalysisSummary, type AnalysisUpdate } from '../services/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import XboxStoreMockup from './XboxStoreMockup';
 
@@ -205,11 +205,13 @@ function EditGameModal({
   onClose,
   onSave,
   onDelete,
+  onDeepAnalysis,
 }: {
   game: AnalysisSummary;
   onClose: () => void;
   onSave: (id: number, update: AnalysisUpdate) => void;
   onDelete: (id: number) => void;
+  onDeepAnalysis: (gameName: string) => void;
 }) {
   const [formData, setFormData] = useState({
     detected_game: game.detected_game || game.game_name || '',
@@ -219,6 +221,7 @@ function EditGameModal({
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRequestingDeepAnalysis, setIsRequestingDeepAnalysis] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,6 +236,12 @@ function EditGameModal({
 
   const handleDelete = () => {
     onDelete(game.id);
+    onClose();
+  };
+
+  const handleDeepAnalysis = async () => {
+    setIsRequestingDeepAnalysis(true);
+    onDeepAnalysis(game.detected_game || game.game_name);
     onClose();
   };
 
@@ -284,6 +293,26 @@ function EditGameModal({
               Steam
               <ExternalLink className="h-3 w-3 opacity-50" />
             </a>
+          </div>
+        </div>
+
+        {/* Deep Analysis Option */}
+        <div className="px-6 py-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-b border-purple-500/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-white">Need higher accuracy?</p>
+              <p className="text-xs text-dark-400 mt-0.5">
+                Re-analyze with Claude Opus + all data sources (YouTube, Steam, Xbox)
+              </p>
+            </div>
+            <button
+              onClick={handleDeepAnalysis}
+              disabled={isRequestingDeepAnalysis}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50"
+            >
+              <Zap className="h-4 w-4" />
+              {isRequestingDeepAnalysis ? 'Starting...' : 'Deep Analysis'}
+            </button>
           </div>
         </div>
 
@@ -686,6 +715,21 @@ export default function Dashboard() {
 
   const handleDeleteGame = async (id: number) => {
     await deleteMutation.mutateAsync(id);
+  };
+
+  const handleDeepAnalysis = async (gameName: string) => {
+    try {
+      // Start a deep analysis job
+      const response = await startTagging({
+        game_name: gameName,
+        sources: ['steam', 'xbox', 'youtube'],
+        quality: 'deep',
+      });
+      // Show a notification or navigate to the job status
+      alert(`Deep analysis started for "${gameName}". Job ID: ${response.job_id}\n\nThis uses Claude Opus and may take a few minutes. Check the main tagging page for status.`);
+    } catch (error) {
+      alert(`Failed to start deep analysis: ${error}`);
+    }
   };
 
   const { data: stats, isLoading, error } = useQuery<StatsResponse>({
@@ -1119,6 +1163,7 @@ export default function Dashboard() {
           onClose={() => setEditingGame(null)}
           onSave={handleSaveGame}
           onDelete={handleDeleteGame}
+          onDeepAnalysis={handleDeepAnalysis}
         />
       )}
     </div>

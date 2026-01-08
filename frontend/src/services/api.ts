@@ -9,6 +9,7 @@ const API_BASE = isLocalhost
 export interface TagRequest {
   game_name: string;
   sources?: string[];
+  quality?: 'standard' | 'deep';
 }
 
 export interface JobCreatedResponse {

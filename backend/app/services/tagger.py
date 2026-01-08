@@ -481,10 +481,18 @@ class AsyncGameTagger:
         self.xbox = AsyncXboxSource()
         self.youtube = AsyncYouTubeSource(self.temp_dir)
 
-    async def analyze_with_claude(self, game_name: str, sources: list) -> dict:
+    async def analyze_with_claude(self, game_name: str, sources: list, quality: str = "standard") -> dict:
         """Combine sources and analyze with Claude."""
         content = []
         context_parts = []
+
+        # Select model based on quality
+        if quality == "deep":
+            model = "claude-opus-4-20250514"
+            max_tokens = 4000
+        else:
+            model = "claude-sonnet-4-20250514"
+            max_tokens = 2000
 
         for src in sources:
             if not src.get('success'):
@@ -532,16 +540,19 @@ class AsyncGameTagger:
             if not self.client.api_key:
                 return {'error': 'ANTHROPIC_API_KEY not configured - please set in environment variables'}
 
+            # Longer timeout for Opus (deep analysis)
+            timeout = 180 if quality == "deep" else 120
+
             response = await asyncio.wait_for(
                 loop.run_in_executor(
                     None,
-                    lambda: self.client.messages.create(
-                        model="claude-sonnet-4-20250514",
-                        max_tokens=2000,
+                    lambda m=model, mt=max_tokens: self.client.messages.create(
+                        model=m,
+                        max_tokens=mt,
                         messages=[{"role": "user", "content": content}]
                     )
                 ),
-                timeout=120  # 2 minute timeout for Claude API
+                timeout=timeout
             )
 
             response_text = response.content[0].text
@@ -565,16 +576,19 @@ class AsyncGameTagger:
         self,
         game_name: str,
         sources: list = None,
+        quality: str = "standard",
         progress_callback: Callable = None
     ) -> dict:
         """Tag a game using specified sources with timeout protection."""
         try:
+            # Longer timeout for deep analysis
+            timeout = 600 if quality == "deep" else 300
             return await asyncio.wait_for(
-                self._tag_game_impl(game_name, sources, progress_callback),
-                timeout=300  # 5 minute master timeout
+                self._tag_game_impl(game_name, sources, quality, progress_callback),
+                timeout=timeout
             )
         except asyncio.TimeoutError:
-            return {'game_name': game_name, 'error': 'Overall tagging process timed out after 5 minutes'}
+            return {'game_name': game_name, 'error': f'Overall tagging process timed out after {timeout // 60} minutes'}
         except Exception as e:
             return {'game_name': game_name, 'error': f'Unexpected error: {str(e)}'}
 
@@ -582,6 +596,7 @@ class AsyncGameTagger:
         self,
         game_name: str,
         sources: list = None,
+        quality: str = "standard",
         progress_callback: Callable = None
     ) -> dict:
         """Internal implementation of tag_game."""
@@ -627,10 +642,12 @@ class AsyncGameTagger:
         if not successful:
             # Try to proceed with just Claude's knowledge if no sources work
             if progress_callback:
-                await progress_callback('analysis', 'processing (no external sources)')
-            result = await self.analyze_with_claude(game_name, [])
+                model_name = "Claude Opus" if quality == "deep" else "Claude Sonnet"
+                await progress_callback('analysis', f'processing with {model_name} (no external sources)')
+            result = await self.analyze_with_claude(game_name, [], quality)
             result['game_name'] = game_name
             result['sources_used'] = ['claude_only']
+            result['quality'] = quality
             result['source_data'] = {}
             if progress_callback:
                 await progress_callback('analysis', 'completed')
@@ -638,9 +655,10 @@ class AsyncGameTagger:
 
         # Analyze with Claude
         if progress_callback:
-            await progress_callback('analysis', 'processing')
+            model_name = "Claude Opus" if quality == "deep" else "Claude Sonnet"
+            await progress_callback('analysis', f'processing with {model_name}')
 
-        result = await self.analyze_with_claude(game_name, source_data)
+        result = await self.analyze_with_claude(game_name, source_data, quality)
 
         if progress_callback:
             await progress_callback('analysis', 'completed')
@@ -648,6 +666,7 @@ class AsyncGameTagger:
         # Add metadata
         result['game_name'] = game_name
         result['sources_used'] = [s['source'] for s in successful]
+        result['quality'] = quality
 
         # Include source data for reference
         result['source_data'] = {

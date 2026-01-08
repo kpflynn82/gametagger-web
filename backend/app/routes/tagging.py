@@ -21,9 +21,14 @@ async def start_tagging_job(request: TagRequest, db: AsyncSession = Depends(get_
     if not sources:
         raise HTTPException(status_code=400, detail="No valid sources specified")
 
+    # For deep analysis, ensure all sources are included
+    quality = request.quality or "standard"
+    if quality == "deep":
+        sources = ["steam", "xbox", "youtube"]
+
     # Create job
     job_manager = get_job_manager()
-    job_id = await job_manager.create_job(request.game_name, sources)
+    job_id = await job_manager.create_job(request.game_name, sources, quality=quality)
 
     # Store job in database
     db_job = Job(
@@ -37,10 +42,12 @@ async def start_tagging_job(request: TagRequest, db: AsyncSession = Depends(get_
     db.add(db_job)
     await db.commit()
 
+    message = "Deep analysis job created (using Claude Opus)" if quality == "deep" else "Analysis job created"
+
     return JobCreatedResponse(
         job_id=job_id,
         status="queued",
-        message="Analysis job created"
+        message=message
     )
 
 

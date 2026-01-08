@@ -24,7 +24,7 @@ class JobManager:
             self._tagger = AsyncGameTagger(self.api_key)
         return self._tagger
 
-    async def create_job(self, game_name: str, sources: list) -> str:
+    async def create_job(self, game_name: str, sources: list, quality: str = "standard") -> str:
         """Create a new tagging job and start processing."""
         job_id = str(uuid4())
 
@@ -32,6 +32,7 @@ class JobManager:
             "id": job_id,
             "game_name": game_name,
             "sources": sources,
+            "quality": quality,
             "status": "queued",
             "progress": {s: "pending" for s in sources + ["analysis"]},
             "created_at": datetime.utcnow(),
@@ -111,6 +112,7 @@ class JobManager:
             result = await self.tagger.tag_game(
                 game_name=job["game_name"],
                 sources=job["sources"],
+                quality=job.get("quality", "standard"),
                 progress_callback=progress_callback
             )
 
