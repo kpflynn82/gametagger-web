@@ -22,6 +22,44 @@ const TAG_CATEGORIES: Record<string, { label: string; color: string; prefix: str
 
 const FEATURE_TAGS = ['multiplayer', 'open_world', 'procedural', 'story_driven'];
 
+// Confidence level explanations
+const CONFIDENCE_EXPLANATIONS: Record<string, { short: string; detailed: string }> = {
+  high: {
+    short: 'High confidence',
+    detailed: 'Multiple reliable data sources confirmed this classification. The game clearly fits this genre with strong evidence from store descriptions, user reviews, and gameplay information.',
+  },
+  medium: {
+    short: 'Medium confidence',
+    detailed: 'Classification based on limited data sources or the game has characteristics of multiple genres. Human review recommended to verify accuracy.',
+  },
+  low: {
+    short: 'Low confidence',
+    detailed: 'Insufficient data available or conflicting information found. This classification is a best guess and should be manually verified before use.',
+  },
+};
+
+// Reusable confidence badge with tooltip
+function ConfidenceBadge({ confidence, size = 'sm' }: { confidence: string; size?: 'sm' | 'md' }) {
+  const explanation = CONFIDENCE_EXPLANATIONS[confidence] || CONFIDENCE_EXPLANATIONS.medium;
+  const sizeClasses = size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm';
+
+  return (
+    <span
+      className={`confidence-${confidence} ${sizeClasses} rounded-lg font-medium uppercase cursor-help relative group`}
+      title={explanation.detailed}
+    >
+      {confidence}
+      {/* Tooltip */}
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-dark-800 border border-dark-500 rounded-lg text-xs text-white font-normal normal-case whitespace-normal w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 shadow-xl z-50 pointer-events-none">
+        <span className="font-semibold block mb-1">{explanation.short}</span>
+        {explanation.detailed}
+        {/* Arrow */}
+        <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-dark-500"></span>
+      </span>
+    </span>
+  );
+}
+
 // Custom tooltip for charts
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
   if (active && payload && payload.length) {
@@ -137,9 +175,7 @@ function GameDetailModal({ gameId, onClose, onOpenXboxMockup }: { gameId: number
         <div className="p-4 border-t border-dark-600 bg-dark-700/50">
           <div className="flex items-center justify-between text-sm text-dark-200">
             <span>Sources: {analysis?.sources_used?.join(', ') || '-'}</span>
-            <span className={`confidence-${analysis?.confidence} px-2 py-1 rounded-lg text-xs font-medium`}>
-              {analysis?.confidence || '-'} confidence
-            </span>
+{analysis?.confidence && <ConfidenceBadge confidence={analysis.confidence} />}
           </div>
         </div>
       </div>
@@ -1033,9 +1069,7 @@ export default function Dashboard() {
                   >
                     <ExternalLink className="h-4 w-4" />
                   </button>
-                  <span className={`confidence-${analysis.confidence} px-2 py-1 rounded-lg text-xs font-medium uppercase`}>
-                    {analysis.confidence}
-                  </span>
+<ConfidenceBadge confidence={analysis.confidence || 'medium'} />
                 </div>
               </div>
             ))}
