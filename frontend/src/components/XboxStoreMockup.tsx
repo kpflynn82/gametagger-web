@@ -47,13 +47,29 @@ function formatTagName(tag: string, prefix: string): string {
   return tag.replace(prefix, '').replace(/_/g, ' ');
 }
 
-// Mock data for the store page
-const MOCK_SCREENSHOTS = [
-  'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&h=450&fit=crop',
-  'https://images.unsplash.com/photo-1552820728-8b83bb6b2b0f?w=800&h=450&fit=crop',
-  'https://images.unsplash.com/photo-1493711662062-fa541f7f3d24?w=800&h=450&fit=crop',
-  'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?w=800&h=450&fit=crop',
-];
+// Function to generate game screenshot URLs
+// Uses RAWG.io CDN with fallback to gradient placeholder
+function getGameImageUrl(gameName: string, _type: 'hero' | 'thumb' = 'hero'): string {
+  // Normalize game name for URL encoding
+  const normalizedName = gameName.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '-');
+
+  // Try RAWG.io CDN (free, good coverage)
+  return `https://media.rawg.io/media/games/${normalizedName}.jpg`;
+}
+
+// Generate placeholder gradient based on game name
+function getPlaceholderGradient(gameName: string): string {
+  // Generate consistent colors from game name
+  let hash = 0;
+  for (let i = 0; i < gameName.length; i++) {
+    hash = gameName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue1 = Math.abs(hash % 360);
+  const hue2 = (hue1 + 40) % 360;
+  return `linear-gradient(135deg, hsl(${hue1}, 70%, 25%) 0%, hsl(${hue2}, 60%, 15%) 100%)`;
+}
 
 interface XboxStoreMockupProps {
   gameId: number;
@@ -199,9 +215,28 @@ function ProtagonistInsight({ tags }: { tags: string[] }) {
   );
 }
 
+// Compact tag pill component for Xbox-style display
+function TagPill({ tag, color = 'gray' }: { tag: string; color?: string }) {
+  const colorClasses: Record<string, string> = {
+    green: 'bg-xbox-green/20 text-xbox-green border-xbox-green/30',
+    purple: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    blue: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    amber: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    pink: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+    cyan: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+    gray: 'bg-white/10 text-white/70 border-white/20',
+  };
+
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${colorClasses[color] || colorClasses.gray} capitalize`}>
+      {tag}
+    </span>
+  );
+}
+
 // Main Xbox Store Mockup Component
 export default function XboxStoreMockup({ gameId, onClose }: XboxStoreMockupProps) {
-  const [selectedScreenshot, setSelectedScreenshot] = useState(0);
+  const [imageError, setImageError] = useState(false);
   const [showAllTags, setShowAllTags] = useState(false);
 
   const { data: analysis, isLoading, error } = useQuery({
@@ -384,11 +419,24 @@ export default function XboxStoreMockup({ gameId, onClose }: XboxStoreMockupProp
           <div className="lg:col-span-2 space-y-6">
             {/* Hero Image */}
             <div className="relative aspect-video bg-gradient-to-br from-[#107C10]/20 to-[#0a0a0a] rounded-xl overflow-hidden border border-white/10">
-              <img
-                src={MOCK_SCREENSHOTS[selectedScreenshot]}
-                alt={gameName}
-                className="w-full h-full object-cover"
-              />
+              {!imageError ? (
+                <img
+                  src={getGameImageUrl(gameName, 'hero')}
+                  alt={gameName}
+                  className="w-full h-full object-cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center"
+                  style={{ background: getPlaceholderGradient(gameName) }}
+                >
+                  <div className="text-center p-8">
+                    <h2 className="text-4xl font-bold text-white mb-2">{gameName}</h2>
+                    <p className="text-white/60 text-sm">{analysis.primary_genre}</p>
+                  </div>
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
               <div className="absolute bottom-4 left-4 right-4">
                 <div className="flex items-center gap-2">
@@ -404,23 +452,6 @@ export default function XboxStoreMockup({ gameId, onClose }: XboxStoreMockupProp
                   )}
                 </div>
               </div>
-            </div>
-
-            {/* Screenshot Thumbnails */}
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {MOCK_SCREENSHOTS.map((screenshot, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedScreenshot(index)}
-                  className={`flex-shrink-0 w-32 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                    selectedScreenshot === index
-                      ? 'border-[#107C10] ring-2 ring-[#107C10]/30'
-                      : 'border-white/10 hover:border-white/30'
-                  }`}
-                >
-                  <img src={screenshot} alt={`Screenshot ${index + 1}`} className="w-full h-full object-cover" />
-                </button>
-              ))}
             </div>
 
             {/* About This Game - VGMS Tags Section */}
@@ -444,41 +475,45 @@ export default function XboxStoreMockup({ gameId, onClose }: XboxStoreMockupProp
                 </div>
               )}
 
-              {/* Tag Categories Grid */}
-              <div className="p-6 space-y-6">
+              {/* Tag Categories - Compact Xbox-style layout */}
+              <div className="p-6 space-y-4">
                 {Object.entries(TAG_CATEGORIES)
                   .filter(([category]) => !['engagement', 'monetization', 'protagonist'].includes(category))
                   .map(([category, config]) => {
                     const tags = groupedTags[category];
                     if (!tags || tags.length === 0) return null;
 
-                    const displayTags = showAllTags ? tags : tags.slice(0, 6);
-                    const hasMore = tags.length > 6;
+                    const displayTags = showAllTags ? tags : tags.slice(0, 8);
+                    const hasMore = tags.length > 8;
+
+                    // Map category to TagPill color
+                    const colorMap: Record<string, string> = {
+                      gameplay: 'purple',
+                      narrative: 'blue',
+                      theme: 'blue',
+                      setting: 'cyan',
+                      mechanic: 'green',
+                      visual: 'purple',
+                      features: 'gray',
+                    };
 
                     return (
-                      <div key={category}>
-                        <h3 className={`text-sm font-semibold ${config.color} mb-3 uppercase tracking-wide`}>
+                      <div key={category} className="flex flex-wrap items-center gap-2">
+                        <span className={`text-xs font-medium ${config.color} uppercase tracking-wide min-w-[70px]`}>
                           {config.label}
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {displayTags.map((tag) => (
-                            <span
-                              key={tag}
-                              className={`${config.bgColor} ${config.color} px-3 py-1.5 rounded-lg text-sm font-medium capitalize border border-white/5`}
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                          {hasMore && !showAllTags && (
-                            <button
-                              onClick={() => setShowAllTags(true)}
-                              className="text-white/50 hover:text-white text-sm flex items-center gap-1 px-3 py-1.5"
-                            >
-                              +{tags.length - 6} more
-                              <ChevronDown className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
+                        </span>
+                        {displayTags.map((tag) => (
+                          <TagPill key={tag} tag={tag} color={colorMap[category] || 'gray'} />
+                        ))}
+                        {hasMore && !showAllTags && (
+                          <button
+                            onClick={() => setShowAllTags(true)}
+                            className="text-white/40 hover:text-white text-xs flex items-center gap-0.5"
+                          >
+                            +{tags.length - 8}
+                            <ChevronDown className="h-3 w-3" />
+                          </button>
+                        )}
                       </div>
                     );
                   })}
