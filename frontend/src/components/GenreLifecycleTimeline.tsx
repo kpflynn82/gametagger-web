@@ -143,7 +143,19 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
   }
 
   // Error state
-  if (error || allGenres.length === 0) {
+  if (error) {
+    return (
+      <div className={`glass-card p-6 ${className}`}>
+        <div className="flex flex-col items-center justify-center h-96 text-dark-400">
+          <p>Failed to load genre data.</p>
+          <p className="text-xs mt-2 text-red-400">{error instanceof Error ? error.message : 'Unknown error'}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (allGenres.length === 0) {
     return (
       <div className={`glass-card p-6 ${className}`}>
         <div className="flex items-center justify-center h-96 text-dark-400">
