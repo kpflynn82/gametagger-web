@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, Activity, Plus, X, ChevronDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Activity, Plus, X, ChevronDown, Loader2 } from 'lucide-react';
+import { getGenreStats, GenreStat } from '../services/api';
 
 // Genre lifecycle stages
 type LifecycleStage = 'emerging' | 'growth' | 'mature' | 'declining';
@@ -8,195 +10,25 @@ type LifecycleStage = 'emerging' | 'growth' | 'mature' | 'declining';
 interface GenreData {
   genre: string;
   stage: LifecycleStage;
-  currentPlayers: number;
+  currentCount: number;
   trend: number; // percentage change
   color: string;
-  data: { month: string; players: number }[];
+  games: string[];
+  data: { month: string; count: number }[];
 }
 
-// Simulated historical data - in production this would come from API
-const GENRE_HISTORY: GenreData[] = [
-  {
-    genre: 'Roguelike',
-    stage: 'growth',
-    currentPlayers: 450000,
-    trend: 34,
-    color: '#22c55e',
-    data: [
-      { month: 'Aug', players: 180000 },
-      { month: 'Sep', players: 220000 },
-      { month: 'Oct', players: 280000 },
-      { month: 'Nov', players: 350000 },
-      { month: 'Dec', players: 410000 },
-      { month: 'Jan', players: 450000 },
-    ],
-  },
-  {
-    genre: 'Cozy Sim',
-    stage: 'growth',
-    currentPlayers: 320000,
-    trend: 28,
-    color: '#f59e0b',
-    data: [
-      { month: 'Aug', players: 140000 },
-      { month: 'Sep', players: 180000 },
-      { month: 'Oct', players: 210000 },
-      { month: 'Nov', players: 260000 },
-      { month: 'Dec', players: 290000 },
-      { month: 'Jan', players: 320000 },
-    ],
-  },
-  {
-    genre: 'FPS',
-    stage: 'mature',
-    currentPlayers: 1100000,
-    trend: 5,
-    color: '#3b82f6',
-    data: [
-      { month: 'Aug', players: 980000 },
-      { month: 'Sep', players: 1020000 },
-      { month: 'Oct', players: 1050000 },
-      { month: 'Nov', players: 1080000 },
-      { month: 'Dec', players: 1100000 },
-      { month: 'Jan', players: 1100000 },
-    ],
-  },
-  {
-    genre: 'Battle Royale',
-    stage: 'declining',
-    currentPlayers: 420000,
-    trend: -15,
-    color: '#ef4444',
-    data: [
-      { month: 'Aug', players: 580000 },
-      { month: 'Sep', players: 550000 },
-      { month: 'Oct', players: 520000 },
-      { month: 'Nov', players: 480000 },
-      { month: 'Dec', players: 450000 },
-      { month: 'Jan', players: 420000 },
-    ],
-  },
-  {
-    genre: 'Extraction Shooter',
-    stage: 'emerging',
-    currentPlayers: 180000,
-    trend: 45,
-    color: '#a855f7',
-    data: [
-      { month: 'Aug', players: 60000 },
-      { month: 'Sep', players: 85000 },
-      { month: 'Oct', players: 110000 },
-      { month: 'Nov', players: 140000 },
-      { month: 'Dec', players: 160000 },
-      { month: 'Jan', players: 180000 },
-    ],
-  },
-  {
-    genre: 'Survival',
-    stage: 'mature',
-    currentPlayers: 680000,
-    trend: 8,
-    color: '#14b8a6',
-    data: [
-      { month: 'Aug', players: 590000 },
-      { month: 'Sep', players: 610000 },
-      { month: 'Oct', players: 640000 },
-      { month: 'Nov', players: 660000 },
-      { month: 'Dec', players: 670000 },
-      { month: 'Jan', players: 680000 },
-    ],
-  },
-  {
-    genre: 'MMORPG',
-    stage: 'declining',
-    currentPlayers: 520000,
-    trend: -8,
-    color: '#ec4899',
-    data: [
-      { month: 'Aug', players: 620000 },
-      { month: 'Sep', players: 600000 },
-      { month: 'Oct', players: 580000 },
-      { month: 'Nov', players: 560000 },
-      { month: 'Dec', players: 540000 },
-      { month: 'Jan', players: 520000 },
-    ],
-  },
-  {
-    genre: 'Souls-like',
-    stage: 'growth',
-    currentPlayers: 380000,
-    trend: 22,
-    color: '#6366f1',
-    data: [
-      { month: 'Aug', players: 220000 },
-      { month: 'Sep', players: 260000 },
-      { month: 'Oct', players: 300000 },
-      { month: 'Nov', players: 340000 },
-      { month: 'Dec', players: 360000 },
-      { month: 'Jan', players: 380000 },
-    ],
-  },
-  {
-    genre: 'City Builder',
-    stage: 'mature',
-    currentPlayers: 290000,
-    trend: 3,
-    color: '#84cc16',
-    data: [
-      { month: 'Aug', players: 270000 },
-      { month: 'Sep', players: 275000 },
-      { month: 'Oct', players: 280000 },
-      { month: 'Nov', players: 285000 },
-      { month: 'Dec', players: 288000 },
-      { month: 'Jan', players: 290000 },
-    ],
-  },
-  {
-    genre: 'Deckbuilder',
-    stage: 'emerging',
-    currentPlayers: 150000,
-    trend: 38,
-    color: '#f472b6',
-    data: [
-      { month: 'Aug', players: 55000 },
-      { month: 'Sep', players: 75000 },
-      { month: 'Oct', players: 95000 },
-      { month: 'Nov', players: 115000 },
-      { month: 'Dec', players: 135000 },
-      { month: 'Jan', players: 150000 },
-    ],
-  },
-  {
-    genre: 'Racing',
-    stage: 'mature',
-    currentPlayers: 410000,
-    trend: 2,
-    color: '#f97316',
-    data: [
-      { month: 'Aug', players: 395000 },
-      { month: 'Sep', players: 400000 },
-      { month: 'Oct', players: 405000 },
-      { month: 'Nov', players: 408000 },
-      { month: 'Dec', players: 410000 },
-      { month: 'Jan', players: 410000 },
-    ],
-  },
-  {
-    genre: 'Horror',
-    stage: 'growth',
-    currentPlayers: 260000,
-    trend: 18,
-    color: '#dc2626',
-    data: [
-      { month: 'Aug', players: 160000 },
-      { month: 'Sep', players: 180000 },
-      { month: 'Oct', players: 220000 },
-      { month: 'Nov', players: 240000 },
-      { month: 'Dec', players: 250000 },
-      { month: 'Jan', players: 260000 },
-    ],
-  },
-];
+// Transform API data to component format
+function transformGenreData(genres: GenreStat[]): GenreData[] {
+  return genres.map(g => ({
+    genre: g.genre,
+    stage: g.stage,
+    currentCount: g.count,
+    trend: g.trend,
+    color: g.color,
+    games: g.games,
+    data: g.history.map(h => ({ month: h.month, count: h.count })),
+  }));
+}
 
 const LIFECYCLE_CONFIG: Record<LifecycleStage, { label: string; color: string; bgColor: string; description: string }> = {
   emerging: {
@@ -225,9 +57,8 @@ const LIFECYCLE_CONFIG: Record<LifecycleStage, { label: string; color: string; b
   },
 };
 
-function formatPlayers(num: number): string {
-  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-  if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
+function formatCount(num: number): string {
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
   return num.toString();
 }
 
@@ -237,7 +68,7 @@ function mergeDataForChart(genres: GenreData[]) {
   return months.map((month, idx) => {
     const point: Record<string, string | number> = { month };
     genres.forEach(genre => {
-      point[genre.genre] = genre.data[idx]?.players || 0;
+      point[genre.genre] = genre.data[idx]?.count || 0;
     });
     return point;
   });
@@ -248,11 +79,30 @@ interface GenreLifecycleTimelineProps {
 }
 
 export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycleTimelineProps) {
-  const [selectedGenres, setSelectedGenres] = useState<string[]>(
-    GENRE_HISTORY.slice(0, 3).map(g => g.genre)
-  );
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch genre data from API
+  const { data: genreStatsData, isLoading, error } = useQuery({
+    queryKey: ['genreStats'],
+    queryFn: getGenreStats,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Transform API data
+  const allGenres = useMemo(() => {
+    if (!genreStatsData?.genres) return [];
+    return transformGenreData(genreStatsData.genres);
+  }, [genreStatsData]);
+
+  // Initialize selected genres when data loads
+  useEffect(() => {
+    if (allGenres.length > 0 && selectedGenres.length === 0) {
+      // Select top 3 genres by count initially
+      setSelectedGenres(allGenres.slice(0, 3).map(g => g.genre));
+    }
+  }, [allGenres, selectedGenres.length]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -276,9 +126,32 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
     setSelectedGenres(prev => prev.filter(g => g !== genre));
   };
 
-  const availableGenres = GENRE_HISTORY.filter(g => !selectedGenres.includes(g.genre));
-  const filteredGenres = GENRE_HISTORY.filter(g => selectedGenres.includes(g.genre));
+  const availableGenres = allGenres.filter(g => !selectedGenres.includes(g.genre));
+  const filteredGenres = allGenres.filter(g => selectedGenres.includes(g.genre));
   const chartData = mergeDataForChart(filteredGenres);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className={`glass-card p-6 ${className}`}>
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="h-8 w-8 text-purple-400 animate-spin" />
+          <span className="ml-3 text-dark-300">Loading genre data...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || allGenres.length === 0) {
+    return (
+      <div className={`glass-card p-6 ${className}`}>
+        <div className="flex items-center justify-center h-96 text-dark-400">
+          <p>No genre data available. Start tagging games to see lifecycle trends.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`glass-card p-6 ${className}`}>
@@ -392,7 +265,7 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
 
         {/* Show count */}
         <span className="text-xs text-dark-400 ml-2">
-          {selectedGenres.length} of {GENRE_HISTORY.length} genres selected
+          {selectedGenres.length} of {allGenres.length} genres selected
         </span>
       </div>
 
@@ -408,7 +281,7 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
             <YAxis
               stroke="#525252"
               tick={{ fill: '#a3a3a3', fontSize: 12 }}
-              tickFormatter={(value) => formatPlayers(value)}
+              tickFormatter={(value) => formatCount(value)}
             />
             <Tooltip
               contentStyle={{
@@ -417,7 +290,7 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
                 borderRadius: '8px',
               }}
               labelStyle={{ color: '#fff' }}
-              formatter={(value: number, name: string) => [formatPlayers(value), name]}
+              formatter={(value: number, name: string) => [`${value} games`, name]}
             />
             <Legend />
             {filteredGenres.map(genre => (
@@ -437,7 +310,7 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
 
       {/* Genre Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-        {GENRE_HISTORY.map(genre => {
+        {allGenres.map(genre => {
           const stageConfig = LIFECYCLE_CONFIG[genre.stage];
           return (
             <div
@@ -459,21 +332,31 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
               <div className="flex items-end justify-between">
                 <div>
                   <p className="text-2xl font-bold text-white">
-                    {formatPlayers(genre.currentPlayers)}
+                    {genre.currentCount}
                   </p>
-                  <p className="text-xs text-dark-400">current players</p>
+                  <p className="text-xs text-dark-400">games in catalog</p>
                 </div>
-                <div className={`flex items-center gap-1 ${genre.trend > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <div className={`flex items-center gap-1 ${genre.trend > 0 ? 'text-green-400' : genre.trend < 0 ? 'text-red-400' : 'text-dark-400'}`}>
                   {genre.trend > 0 ? (
                     <TrendingUp className="h-4 w-4" />
-                  ) : (
+                  ) : genre.trend < 0 ? (
                     <TrendingDown className="h-4 w-4" />
+                  ) : (
+                    <Minus className="h-4 w-4" />
                   )}
                   <span className="text-sm font-medium">
                     {genre.trend > 0 ? '+' : ''}{genre.trend}%
                   </span>
                 </div>
               </div>
+              {/* Sample games */}
+              {genre.games.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-dark-600/50">
+                  <p className="text-xs text-dark-400 truncate" title={genre.games.join(', ')}>
+                    {genre.games.slice(0, 2).join(', ')}{genre.games.length > 2 ? '...' : ''}
+                  </p>
+                </div>
+              )}
             </div>
           );
         })}
@@ -482,9 +365,23 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
       {/* Insight Box */}
       <div className="mt-6 p-4 bg-purple-500/10 rounded-xl border border-purple-500/20">
         <p className="text-sm text-purple-300">
-          <span className="font-semibold">Insight:</span> Extraction Shooters (+45%) and Roguelikes (+34%) show strongest growth momentum.
-          Consider prioritizing catalog acquisitions in these emerging/growth categories while Battle Royale (-15%)
-          may be oversaturated.
+          <span className="font-semibold">Insight:</span>{' '}
+          {(() => {
+            const growthGenres = allGenres.filter(g => g.stage === 'growth' || g.stage === 'emerging');
+            const decliningGenres = allGenres.filter(g => g.stage === 'declining');
+            const topGrowth = growthGenres.slice(0, 2);
+
+            if (topGrowth.length === 0) {
+              return `Your catalog has ${allGenres.length} genres. Most genres are mature or stable.`;
+            }
+
+            const growthText = topGrowth.map(g => `${g.genre} (+${g.trend}%)`).join(' and ');
+            const decliningText = decliningGenres.length > 0
+              ? ` while ${decliningGenres[0].genre} may be oversaturated.`
+              : '.';
+
+            return `${growthText} show${topGrowth.length === 1 ? 's' : ''} growth momentum. Consider prioritizing these ${topGrowth.length === 1 ? 'category' : 'categories'}${decliningText}`;
+          })()}
         </p>
       </div>
     </div>

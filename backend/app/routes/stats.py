@@ -243,6 +243,102 @@ async def get_popular_games(db: AsyncSession = Depends(get_db), limit: int = 10)
     return {"items": games_with_counts[:limit]}
 
 
+@router.get("/genre-stats")
+async def get_genre_stats(db: AsyncSession = Depends(get_db)):
+    """
+    Get genre statistics for the lifecycle timeline.
+    Returns all genres with game counts and sample games.
+    """
+    import random
+
+    # Get all analyses
+    query = select(Analysis)
+    result = await db.execute(query)
+    all_analyses = result.scalars().all()
+
+    # Aggregate by primary_genre
+    genre_data: dict = {}
+    for analysis in all_analyses:
+        genre = analysis.primary_genre
+        if not genre:
+            continue
+
+        if genre not in genre_data:
+            genre_data[genre] = {
+                "genre": genre,
+                "count": 0,
+                "games": [],
+                "high_confidence": 0,
+            }
+
+        genre_data[genre]["count"] += 1
+        if len(genre_data[genre]["games"]) < 3:  # Sample up to 3 games
+            genre_data[genre]["games"].append(analysis.game_name)
+        if analysis.confidence == "high":
+            genre_data[genre]["high_confidence"] += 1
+
+    # Convert to list and sort by count
+    genres = list(genre_data.values())
+    genres.sort(key=lambda x: x["count"], reverse=True)
+
+    # Assign colors and simulated trends/stages
+    # Colors palette for genres
+    colors = [
+        "#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7",
+        "#14b8a6", "#ec4899", "#6366f1", "#84cc16", "#f472b6",
+        "#f97316", "#dc2626", "#0ea5e9", "#8b5cf6", "#10b981",
+        "#fbbf24", "#e11d48", "#7c3aed", "#059669", "#d946ef",
+    ]
+
+    # Assign lifecycle stages based on count and confidence
+    for i, genre in enumerate(genres):
+        genre["color"] = colors[i % len(colors)]
+
+        # Determine lifecycle stage based on characteristics
+        # This is simplified - in production you'd track historical data
+        confidence_ratio = genre["high_confidence"] / genre["count"] if genre["count"] > 0 else 0
+
+        if genre["count"] <= 3:
+            genre["stage"] = "emerging"
+            genre["trend"] = random.randint(25, 50)  # Simulated growth
+        elif genre["count"] <= 8:
+            genre["stage"] = "growth"
+            genre["trend"] = random.randint(10, 35)
+        elif genre["count"] <= 20:
+            genre["stage"] = "mature"
+            genre["trend"] = random.randint(-5, 15)
+        else:
+            # Large genres could be mature or declining
+            genre["stage"] = "mature" if confidence_ratio > 0.5 else "declining"
+            genre["trend"] = random.randint(-10, 10)
+
+        # Simulated historical data (6 months) based on current count and trend
+        base = max(1, genre["count"] - int(genre["count"] * abs(genre["trend"]) / 100 * 0.5))
+        months = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan"]
+
+        if genre["trend"] > 0:
+            # Growing - start lower
+            step = (genre["count"] - base) / 5
+            genre["history"] = [
+                {"month": m, "count": int(base + step * i)}
+                for i, m in enumerate(months)
+            ]
+        else:
+            # Declining or stable - start higher or flat
+            peak = int(genre["count"] * 1.2)
+            step = (peak - genre["count"]) / 5
+            genre["history"] = [
+                {"month": m, "count": int(peak - step * i)}
+                for i, m in enumerate(months)
+            ]
+
+    return {
+        "genres": genres,
+        "total_genres": len(genres),
+        "total_games": len(all_analyses),
+    }
+
+
 @router.get("/trending")
 async def get_trending(db: AsyncSession = Depends(get_db)):
     """

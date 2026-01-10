@@ -226,3 +226,34 @@ export async function getTrending(): Promise<TrendingResponse> {
   }
   return response.json();
 }
+
+// Genre stats types
+export interface GenreHistoryPoint {
+  month: string;
+  count: number;
+}
+
+export interface GenreStat {
+  genre: string;
+  count: number;
+  games: string[];
+  high_confidence: number;
+  color: string;
+  stage: 'emerging' | 'growth' | 'mature' | 'declining';
+  trend: number;
+  history: GenreHistoryPoint[];
+}
+
+export interface GenreStatsResponse {
+  genres: GenreStat[];
+  total_genres: number;
+  total_games: number;
+}
+
+export async function getGenreStats(): Promise<GenreStatsResponse> {
+  const response = await fetch(`${API_BASE}/genre-stats`);
+  if (!response.ok) {
+    throw new Error(`Failed to get genre stats: ${response.statusText}`);
+  }
+  return response.json();
+}
