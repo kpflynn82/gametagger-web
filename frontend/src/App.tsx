@@ -137,25 +137,26 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-dark-900/80 backdrop-blur-xl border-b border-dark-700">
+    <header className="sticky top-0 z-30 bg-dark-900/90 backdrop-blur-xl border-b border-dark-700/50">
       <div className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-4">
           <button
             onClick={onMenuClick}
-            className="p-2 text-dark-200 hover:text-white lg:hidden"
+            className="p-2 text-dark-200 hover:text-white hover:bg-dark-700 rounded-lg transition-colors lg:hidden"
+            aria-label="Open menu"
           >
             <Menu className="h-6 w-6" />
           </button>
           <div>
-            <h2 className="text-xl font-semibold text-white">{getPageTitle()}</h2>
-            <p className="text-sm text-dark-200 hidden sm:block">{getPageDescription()}</p>
+            <h2 className="text-xl font-semibold text-white tracking-tight">{getPageTitle()}</h2>
+            <p className="text-sm text-dark-300 hidden sm:block">{getPageDescription()}</p>
           </div>
         </div>
 
         {/* Xbox Branding */}
         <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-dark-700 rounded-lg border border-dark-600">
-            <span className="text-xs text-dark-200">Powered by</span>
+          <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-dark-800/50 rounded-lg border border-dark-600/50">
+            <span className="text-xs text-dark-300">Powered by</span>
             <span className="text-sm font-semibold text-xbox-green">Xbox</span>
           </div>
         </div>

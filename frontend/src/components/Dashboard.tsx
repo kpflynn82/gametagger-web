@@ -829,33 +829,55 @@ function ReviewPanel({
   );
 }
 
-function StatCard({ title, value, icon: Icon, subtitle, trend }: {
+function StatCard({ title, value, icon: Icon, subtitle, trend, variant = 'default' }: {
   title: string;
   value: string | number;
   icon: React.ElementType;
   subtitle?: string;
   trend?: number;
+  variant?: 'default' | 'primary' | 'success' | 'warning';
 }) {
+  const variantStyles = {
+    default: {
+      iconBg: 'bg-xbox-green/10 border-xbox-green/20',
+      iconColor: 'text-xbox-green',
+    },
+    primary: {
+      iconBg: 'bg-xbox-green/20 border-xbox-green/40',
+      iconColor: 'text-xbox-green',
+    },
+    success: {
+      iconBg: 'bg-emerald-500/10 border-emerald-500/20',
+      iconColor: 'text-emerald-400',
+    },
+    warning: {
+      iconBg: 'bg-amber-500/10 border-amber-500/20',
+      iconColor: 'text-amber-400',
+    },
+  };
+
+  const styles = variantStyles[variant];
+
   return (
-    <div className="glass-card glass-card-hover p-6 stat-card">
+    <div className="glass-card glass-card-hover p-6 stat-card group">
       <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-dark-200">{title}</p>
-          <p className="text-3xl font-bold text-white mt-2">{value}</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-dark-200 tracking-wide">{title}</p>
+          <p className="text-3xl font-bold text-white mt-2 tabular-nums">{value}</p>
           {subtitle && (
-            <p className="text-sm text-dark-300 mt-1 flex items-center gap-1">
+            <p className="text-sm text-dark-300 mt-2 flex items-center gap-1.5">
               {trend !== undefined && (
-                <span className={`flex items-center ${trend >= 0 ? 'text-xbox-green' : 'text-red-400'}`}>
-                  <ArrowUpRight className={`h-3 w-3 ${trend < 0 ? 'rotate-180' : ''}`} />
+                <span className={`flex items-center gap-0.5 font-medium ${trend >= 0 ? 'text-xbox-green' : 'text-red-400'}`}>
+                  <ArrowUpRight className={`h-3.5 w-3.5 ${trend < 0 ? 'rotate-180' : ''}`} />
                   {Math.abs(trend)}%
                 </span>
               )}
-              {subtitle}
+              <span className="text-dark-400">{subtitle}</span>
             </p>
           )}
         </div>
-        <div className="p-3 bg-xbox-green/10 rounded-xl border border-xbox-green/20">
-          <Icon className="h-6 w-6 text-xbox-green" />
+        <div className={`p-3 rounded-xl border ${styles.iconBg} transition-transform group-hover:scale-110`}>
+          <Icon className={`h-6 w-6 ${styles.iconColor}`} />
         </div>
       </div>
     </div>
@@ -1083,9 +1105,11 @@ export default function Dashboard() {
   }));
 
   return (
-    <div className="space-y-8 animate-in">
+    <div className="space-y-10 animate-in">
       {/* Hero Stats - Business Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+      <section aria-labelledby="hero-stats">
+        <h2 id="hero-stats" className="sr-only">Key Metrics</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <StatCard
           title="Games Classified"
           value={stats.total_analyses.toLocaleString()}
@@ -1110,15 +1134,23 @@ export default function Dashboard() {
           icon={Zap}
           subtitle="per game average"
         />
-      </div>
+        </div>
+      </section>
 
-      {/* Genre Lifecycle Timeline */}
-      <GenreLifecycleTimeline />
+      {/* Strategic Insights Section */}
+      <section aria-labelledby="strategic-insights" className="space-y-6">
+        <div className="flex items-center gap-3 pb-2 border-b border-dark-700">
+          <div className="w-1 h-6 bg-xbox-green rounded-full"></div>
+          <h2 id="strategic-insights" className="text-lg font-semibold text-white">Strategic Insights</h2>
+        </div>
+
+        {/* Genre Lifecycle Timeline */}
+        <GenreLifecycleTimeline />
 
       {/* Trending on Steam */}
       {trendingData && !trendingData.error && (
         <div className="glass-card p-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-orange-500/10 rounded-lg border border-orange-500/20">
                 <Flame className="h-5 w-5 text-orange-400" />
@@ -1130,9 +1162,19 @@ export default function Dashboard() {
                 </p>
               </div>
             </div>
-            <span className="text-xs text-dark-400">
-              Updated {new Date(trendingData.updated_at).toLocaleTimeString()}
-            </span>
+            <div className="flex items-center gap-4">
+              {/* Quick coverage metric */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-dark-700/50 rounded-lg border border-dark-600">
+                <CheckCircle className="h-4 w-4 text-xbox-green" />
+                <span className="text-sm font-medium text-white">
+                  {trendingData.trending_games.filter(g => g.in_database).length}/{trendingData.trending_games.length}
+                </span>
+                <span className="text-xs text-dark-400">tagged</span>
+              </div>
+              <span className="text-xs text-dark-400 hidden sm:inline">
+                Updated {new Date(trendingData.updated_at).toLocaleTimeString()}
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1235,8 +1277,17 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Tagging Health Scorecard */}
-      <ExecutiveHealthScorecard
+      </section>
+
+      {/* Operational Health Section */}
+      <section aria-labelledby="operational-health" className="space-y-6">
+        <div className="flex items-center gap-3 pb-2 border-b border-dark-700">
+          <div className="w-1 h-6 bg-amber-500 rounded-full"></div>
+          <h2 id="operational-health" className="text-lg font-semibold text-white">Operational Health</h2>
+        </div>
+
+        {/* Tagging Health Scorecard */}
+        <ExecutiveHealthScorecard
         totalGames={stats.total_analyses}
         highConfidencePercent={stats.average_confidence}
         gamesThisWeek={stats.analyses_this_week}
@@ -1334,8 +1385,16 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      </section>
 
-      {/* Genre Distribution - Full Width */}
+      {/* Analytics Section */}
+      <section aria-labelledby="analytics" className="space-y-6">
+        <div className="flex items-center gap-3 pb-2 border-b border-dark-700">
+          <div className="w-1 h-6 bg-blue-500 rounded-full"></div>
+          <h2 id="analytics" className="text-lg font-semibold text-white">Detailed Analytics</h2>
+        </div>
+
+        {/* Genre Distribution - Full Width */}
       <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-white">Genre Coverage</h3>
@@ -1456,8 +1515,16 @@ export default function Dashboard() {
           </div>
         </>
       )}
+      </section>
 
-      {/* Most Recent Classifications */}
+      {/* Recent Activity Section */}
+      <section aria-labelledby="recent-activity" className="space-y-6">
+        <div className="flex items-center gap-3 pb-2 border-b border-dark-700">
+          <div className="w-1 h-6 bg-purple-500 rounded-full"></div>
+          <h2 id="recent-activity" className="text-lg font-semibold text-white">Recent Activity</h2>
+        </div>
+
+        {/* Most Recent Classifications */}
       {recentHistory && recentHistory.items.length > 0 && (
         <div className="glass-card p-6">
           <div className="flex items-center gap-3 mb-6">
@@ -1607,6 +1674,7 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      </section>
 
       {/* Game Detail Modal */}
       {selectedGameId && (

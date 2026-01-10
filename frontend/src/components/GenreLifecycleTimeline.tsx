@@ -158,8 +158,14 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
   if (allGenres.length === 0) {
     return (
       <div className={`glass-card p-6 ${className}`}>
-        <div className="flex items-center justify-center h-96 text-dark-400">
-          <p>No genre data available. Start tagging games to see lifecycle trends.</p>
+        <div className="flex flex-col items-center justify-center h-96 text-center">
+          <div className="p-4 bg-purple-500/10 rounded-2xl border border-purple-500/20 mb-4">
+            <Activity className="h-10 w-10 text-purple-400" />
+          </div>
+          <h4 className="text-lg font-medium text-white mb-2">No Genre Data Yet</h4>
+          <p className="text-dark-400 max-w-md">
+            Start tagging games to see lifecycle trends and strategic insights about genre performance.
+          </p>
         </div>
       </div>
     );
@@ -297,12 +303,16 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#1f1f1f',
-                border: '1px solid #404040',
-                borderRadius: '8px',
+                backgroundColor: 'rgba(18, 18, 18, 0.95)',
+                border: '1px solid #3d3d3d',
+                borderRadius: '12px',
+                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
+                padding: '12px 16px',
               }}
-              labelStyle={{ color: '#fff' }}
-              formatter={(value: number, name: string) => [`${value} games`, name]}
+              labelStyle={{ color: '#fff', fontWeight: 600, marginBottom: '8px' }}
+              itemStyle={{ color: '#a3a3a3', padding: '2px 0' }}
+              formatter={(value: number, name: string) => [`${value.toLocaleString()} games`, name]}
+              cursor={{ stroke: '#525252', strokeDasharray: '4 4' }}
             />
             <Legend />
             {filteredGenres.map(genre => (
@@ -321,8 +331,8 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
       </div>
 
       {/* Genre Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-        {allGenres.map(genre => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-6">
+        {allGenres.slice(0, 8).map(genre => {
           const stageConfig = LIFECYCLE_CONFIG[genre.stage];
           return (
             <div
@@ -373,6 +383,13 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
           );
         })}
       </div>
+
+      {/* Show more indicator */}
+      {allGenres.length > 8 && (
+        <p className="text-center text-sm text-dark-400 mt-4">
+          Showing top 8 of {allGenres.length} genres. Use the dropdown above to explore more.
+        </p>
+      )}
 
       {/* Insight Box */}
       <div className="mt-6 p-4 bg-purple-500/10 rounded-xl border border-purple-500/20">

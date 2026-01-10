@@ -60,17 +60,34 @@ function ScoreCard({ data }: { data: ScoreCardData }) {
       </div>
 
       {/* Progress Bar */}
-      <div className="h-2 bg-dark-600 rounded-full mb-3 overflow-hidden">
+      <div
+        className="h-2.5 bg-dark-500/50 rounded-full mb-3 overflow-hidden relative"
+        role="progressbar"
+        aria-valuenow={percentage}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${data.label}: ${percentage}%`}
+      >
         <div
-          className={`h-full rounded-full transition-all duration-500 ${
+          className={`h-full rounded-full transition-all duration-700 ease-out ${
             data.status === 'good'
-              ? 'bg-green-500'
+              ? 'bg-gradient-to-r from-green-600 to-green-400'
               : data.status === 'warning'
-              ? 'bg-amber-500'
-              : 'bg-red-500'
+              ? 'bg-gradient-to-r from-amber-600 to-amber-400'
+              : 'bg-gradient-to-r from-red-600 to-red-400'
           }`}
           style={{ width: `${percentage}%` }}
         />
+        {/* Subtle grid lines for scale reference */}
+        <div className="absolute inset-0 flex">
+          {[25, 50, 75].map((mark) => (
+            <div
+              key={mark}
+              className="absolute h-full w-px bg-dark-400/30"
+              style={{ left: `${mark}%` }}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Trend */}
