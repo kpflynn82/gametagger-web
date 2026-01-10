@@ -160,8 +160,8 @@ export default function ExecutiveHealthScorecard({
             <Activity className="h-5 w-5 text-xbox-green" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">Executive Health Scorecard</h3>
-            <p className="text-sm text-dark-300">Catalog health at a glance</p>
+            <h3 className="text-lg font-semibold text-white">Tagging Health Scorecard</h3>
+            <p className="text-sm text-dark-300">Classification health at a glance</p>
           </div>
         </div>
 

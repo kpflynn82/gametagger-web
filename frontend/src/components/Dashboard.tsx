@@ -1112,16 +1112,6 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Executive Health Scorecard */}
-      <ExecutiveHealthScorecard
-        totalGames={stats.total_analyses}
-        highConfidencePercent={stats.average_confidence}
-        gamesThisWeek={stats.analyses_this_week}
-        trendingAlignment={trendingData?.trending_games?.filter(g => g.in_database).length
-          ? trendingData.trending_games.filter(g => g.in_database).length / trendingData.trending_games.length
-          : 0.5}
-      />
-
       {/* Genre Lifecycle Timeline */}
       <GenreLifecycleTimeline />
 
@@ -1244,6 +1234,16 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Tagging Health Scorecard */}
+      <ExecutiveHealthScorecard
+        totalGames={stats.total_analyses}
+        highConfidencePercent={stats.average_confidence}
+        gamesThisWeek={stats.analyses_this_week}
+        trendingAlignment={trendingData?.trending_games?.filter(g => g.in_database).length
+          ? trendingData.trending_games.filter(g => g.in_database).length / trendingData.trending_games.length
+          : 0.5}
+      />
 
       {/* Quality & Cost Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
