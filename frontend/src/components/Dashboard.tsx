@@ -27,18 +27,33 @@ const TAG_CATEGORIES: Record<string, { label: string; color: string; prefix: str
 const FEATURE_TAGS = ['multiplayer', 'open_world', 'procedural', 'story_driven'];
 
 // Confidence level explanations
-const CONFIDENCE_EXPLANATIONS: Record<string, { short: string; detailed: string }> = {
+const CONFIDENCE_EXPLANATIONS: Record<string, { short: string; detailed: string; bullets: string[] }> = {
   high: {
     short: 'High confidence',
-    detailed: 'Multiple reliable data sources confirmed this classification. The game clearly fits this genre with strong evidence from store descriptions, user reviews, and gameplay information.',
+    detailed: 'Multiple reliable data sources confirmed this classification.',
+    bullets: [
+      '✓ Multiple data sources confirmed',
+      '✓ Clear genre match from store descriptions',
+      '✓ Consistent gameplay indicators',
+    ],
   },
   medium: {
     short: 'Medium confidence',
-    detailed: 'Classification based on limited data sources or the game has characteristics of multiple genres. Human review recommended to verify accuracy.',
+    detailed: 'Limited data or multi-genre characteristics detected.',
+    bullets: [
+      '⚠ Limited data sources available',
+      '⚠ Game spans multiple genres',
+      '⚠ Human review recommended',
+    ],
   },
   low: {
     short: 'Low confidence',
-    detailed: 'Insufficient data available or conflicting information found. This classification is a best guess and should be manually verified before use.',
+    detailed: 'Insufficient or conflicting data found.',
+    bullets: [
+      '✗ Insufficient data found',
+      '✗ Conflicting information detected',
+      '✗ Manual verification required',
+    ],
   },
 };
 
@@ -50,13 +65,19 @@ function ConfidenceBadge({ confidence, size = 'sm' }: { confidence: string; size
   return (
     <span
       className={`confidence-${confidence} ${sizeClasses} rounded-lg font-medium uppercase cursor-help relative group`}
-      title={explanation.detailed}
     >
       {confidence}
-      {/* Tooltip */}
-      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-dark-800 border border-dark-500 rounded-lg text-xs text-white font-normal normal-case whitespace-normal w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 shadow-xl z-50 pointer-events-none">
-        <span className="font-semibold block mb-1">{explanation.short}</span>
-        {explanation.detailed}
+      {/* Enhanced Tooltip with bullets */}
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-4 py-3 bg-dark-800 border border-dark-500 rounded-xl text-xs text-white font-normal normal-case whitespace-normal w-72 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 shadow-xl z-50 pointer-events-none">
+        <span className={`font-semibold block mb-2 ${confidence === 'high' ? 'text-green-400' : confidence === 'medium' ? 'text-amber-400' : 'text-red-400'}`}>
+          {explanation.short}
+        </span>
+        <span className="text-dark-200 block mb-2">{explanation.detailed}</span>
+        <span className="space-y-1 block">
+          {explanation.bullets.map((bullet, i) => (
+            <span key={i} className="block text-dark-100">{bullet}</span>
+          ))}
+        </span>
         {/* Arrow */}
         <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-dark-500"></span>
       </span>

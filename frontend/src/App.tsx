@@ -153,13 +153,6 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
           </div>
         </div>
 
-        {/* Xbox Branding */}
-        <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-dark-800/50 rounded-lg border border-dark-600/50">
-            <span className="text-xs text-dark-300">Powered by</span>
-            <span className="text-sm font-semibold text-xbox-green">Xbox</span>
-          </div>
-        </div>
       </div>
     </header>
   );
@@ -192,9 +185,8 @@ function AppContent() {
 
         {/* Footer */}
         <footer className="border-t border-dark-700 px-6 py-4">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-dark-300">
+          <div className="max-w-7xl mx-auto text-center text-sm text-dark-300">
             <span>GameTagger VGMS - Video Game Metadata System</span>
-            <span>Built for Xbox Game Studios</span>
           </div>
         </footer>
       </div>

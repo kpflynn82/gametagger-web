@@ -81,6 +81,7 @@ interface GenreLifecycleTimelineProps {
 export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycleTimelineProps) {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [activeStageFilter, setActiveStageFilter] = useState<LifecycleStage | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch genre data from API
@@ -125,6 +126,34 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
   const removeGenre = (genre: string) => {
     setSelectedGenres(prev => prev.filter(g => g !== genre));
   };
+
+  // Handle clicking a lifecycle stage button to filter genres
+  const handleStageClick = (stage: LifecycleStage) => {
+    if (activeStageFilter === stage) {
+      // Toggle off - restore to top 3 genres
+      setActiveStageFilter(null);
+      setSelectedGenres(allGenres.slice(0, 3).map(g => g.genre));
+    } else {
+      // Filter to this stage
+      setActiveStageFilter(stage);
+      const genresInStage = allGenres.filter(g => g.stage === stage).map(g => g.genre);
+      setSelectedGenres(genresInStage.slice(0, 5)); // Limit to top 5 in this stage
+    }
+  };
+
+  // Get count of genres in each stage
+  const stageCounts = useMemo(() => {
+    const counts: Record<LifecycleStage, number> = {
+      emerging: 0,
+      growth: 0,
+      mature: 0,
+      declining: 0,
+    };
+    allGenres.forEach(g => {
+      counts[g.stage]++;
+    });
+    return counts;
+  }, [allGenres]);
 
   const availableGenres = allGenres.filter(g => !selectedGenres.includes(g.genre));
   const filteredGenres = allGenres.filter(g => selectedGenres.includes(g.genre));
@@ -185,21 +214,42 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
         </div>
       </div>
 
-      {/* Lifecycle Stage Legend */}
+      {/* Lifecycle Stage Filters - Clickable */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {Object.entries(LIFECYCLE_CONFIG).map(([stage, config]) => (
-          <div
-            key={stage}
-            className={`px-3 py-1.5 rounded-lg border ${config.bgColor} flex items-center gap-2`}
-            title={config.description}
+        {(Object.entries(LIFECYCLE_CONFIG) as [LifecycleStage, typeof LIFECYCLE_CONFIG[LifecycleStage]][]).map(([stage, config]) => {
+          const isActive = activeStageFilter === stage;
+          const count = stageCounts[stage];
+          return (
+            <button
+              key={stage}
+              onClick={() => handleStageClick(stage)}
+              className={`px-3 py-1.5 rounded-lg border flex items-center gap-2 transition-all duration-200 ${
+                isActive
+                  ? `${config.bgColor} ring-2 ring-offset-2 ring-offset-dark-800 ${stage === 'emerging' ? 'ring-purple-500' : stage === 'growth' ? 'ring-green-500' : stage === 'mature' ? 'ring-blue-500' : 'ring-red-500'}`
+                  : `${config.bgColor} hover:opacity-80`
+              }`}
+              title={`${config.description} - Click to filter (${count} genres)`}
+            >
+              {stage === 'emerging' && <TrendingUp className="h-3 w-3 text-purple-400" />}
+              {stage === 'growth' && <TrendingUp className="h-3 w-3 text-green-400" />}
+              {stage === 'mature' && <Minus className="h-3 w-3 text-blue-400" />}
+              {stage === 'declining' && <TrendingDown className="h-3 w-3 text-red-400" />}
+              <span className={`text-xs font-medium ${config.color}`}>{config.label}</span>
+              <span className={`text-xs ${config.color} opacity-70`}>({count})</span>
+            </button>
+          );
+        })}
+        {activeStageFilter && (
+          <button
+            onClick={() => {
+              setActiveStageFilter(null);
+              setSelectedGenres(allGenres.slice(0, 3).map(g => g.genre));
+            }}
+            className="px-3 py-1.5 rounded-lg border border-dark-500 text-xs text-dark-300 hover:bg-dark-600 transition-colors"
           >
-            {stage === 'emerging' && <TrendingUp className="h-3 w-3 text-purple-400" />}
-            {stage === 'growth' && <TrendingUp className="h-3 w-3 text-green-400" />}
-            {stage === 'mature' && <Minus className="h-3 w-3 text-blue-400" />}
-            {stage === 'declining' && <TrendingDown className="h-3 w-3 text-red-400" />}
-            <span className={`text-xs font-medium ${config.color}`}>{config.label}</span>
-          </div>
-        ))}
+            Clear filter
+          </button>
+        )}
       </div>
 
       {/* Genre Selector - Selected genres as removable chips + Add dropdown */}
