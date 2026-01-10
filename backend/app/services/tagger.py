@@ -63,6 +63,16 @@ VGMS_CATEGORIES = {
     ],
     'protagonist': [
         'customizable', 'predefined', 'ensemble', 'non_human'
+    ],
+    # Accessibility features
+    'accessibility': [
+        'colorblind_modes', 'subtitle_options', 'difficulty_options',
+        'motor_accessibility', 'cognitive_assist'
+    ],
+    # Demographic appeal
+    'demographic': [
+        'family_friendly', 'teen_focused', 'mature_audience',
+        'female_protagonist', 'diverse_cast', 'nostalgia_retro'
     ]
 }
 
@@ -85,6 +95,8 @@ Based on all available information, return a JSON object with:
    - engagement_gacha, engagement_daily_rewards, engagement_energy_system, engagement_pvp, engagement_guild, engagement_events, engagement_battle_pass, engagement_auto_play
    - monetization_free_to_play, monetization_premium, monetization_subscription, monetization_iap
    - protagonist_customizable, protagonist_predefined, protagonist_ensemble, protagonist_non_human
+   - accessibility_colorblind_modes, accessibility_subtitle_options, accessibility_difficulty_options, accessibility_motor_accessibility, accessibility_cognitive_assist
+   - demographic_family_friendly, demographic_teen_focused, demographic_mature_audience, demographic_female_protagonist, demographic_diverse_cast, demographic_nostalgia_retro
 
 2. Metadata:
    - detected_game: The game name you identified

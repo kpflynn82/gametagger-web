@@ -5,6 +5,8 @@ import { Target, Gamepad2, Trophy, X, ArrowUpRight, Zap, ExternalLink, CheckCirc
 import { getStats, getPopularGames, getAnalysis, getHistory, updateAnalysis, deleteAnalysis, startTagging, getJobStatus, saveJobResult, getTrending, type StatsResponse, type PopularGamesResponse, type AnalysisSummary, type AnalysisUpdate, type TrendingResponse } from '../services/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import XboxStoreMockup from './XboxStoreMockup';
+import GenreLifecycleTimeline from './GenreLifecycleTimeline';
+import ExecutiveHealthScorecard from './ExecutiveHealthScorecard';
 
 // Tag category configuration
 const TAG_CATEGORIES: Record<string, { label: string; color: string; prefix: string }> = {
@@ -18,6 +20,8 @@ const TAG_CATEGORIES: Record<string, { label: string; color: string; prefix: str
   engagement: { label: 'Engagement', color: 'tag-engagement', prefix: 'engagement_' },
   monetization: { label: 'Monetization', color: 'tag-monetization', prefix: 'monetization_' },
   protagonist: { label: 'Protagonist', color: 'tag-protagonist', prefix: 'protagonist_' },
+  accessibility: { label: 'Accessibility', color: 'tag-accessibility', prefix: 'accessibility_' },
+  demographic: { label: 'Demographic', color: 'tag-demographic', prefix: 'demographic_' },
 };
 
 const FEATURE_TAGS = ['multiplayer', 'open_world', 'procedural', 'story_driven'];
@@ -1107,6 +1111,19 @@ export default function Dashboard() {
           subtitle="per game average"
         />
       </div>
+
+      {/* Executive Health Scorecard */}
+      <ExecutiveHealthScorecard
+        totalGames={stats.total_analyses}
+        highConfidencePercent={stats.average_confidence}
+        gamesThisWeek={stats.analyses_this_week}
+        trendingAlignment={trendingData?.trending_games?.filter(g => g.in_database).length
+          ? trendingData.trending_games.filter(g => g.in_database).length / trendingData.trending_games.length
+          : 0.5}
+      />
+
+      {/* Genre Lifecycle Timeline */}
+      <GenreLifecycleTimeline />
 
       {/* Trending on Steam */}
       {trendingData && !trendingData.error && (

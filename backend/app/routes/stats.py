@@ -60,6 +60,16 @@ TAG_CATEGORIES = {
     'protagonist': [
         'protagonist_customizable', 'protagonist_predefined',
         'protagonist_ensemble', 'protagonist_non_human'
+    ],
+    'accessibility': [
+        'accessibility_colorblind_modes', 'accessibility_subtitle_options',
+        'accessibility_difficulty_options', 'accessibility_motor_accessibility',
+        'accessibility_cognitive_assist'
+    ],
+    'demographic': [
+        'demographic_family_friendly', 'demographic_teen_focused',
+        'demographic_mature_audience', 'demographic_female_protagonist',
+        'demographic_diverse_cast', 'demographic_nostalgia_retro'
     ]
 }
 

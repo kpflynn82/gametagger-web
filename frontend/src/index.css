@@ -91,6 +91,12 @@ body {
 .tag-protagonist {
   @apply bg-pink-500/20 text-pink-300 border border-pink-500/30;
 }
+.tag-accessibility {
+  @apply bg-sky-500/20 text-sky-300 border border-sky-500/30;
+}
+.tag-demographic {
+  @apply bg-rose-500/20 text-rose-300 border border-rose-500/30;
+}
 
 /* Confidence badges */
 .confidence-high {
