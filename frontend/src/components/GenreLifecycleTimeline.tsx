@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Activity, Plus, X, ChevronDown } from 'lucide-react';
 
 // Genre lifecycle stages
 type LifecycleStage = 'emerging' | 'growth' | 'mature' | 'declining';
@@ -91,6 +91,111 @@ const GENRE_HISTORY: GenreData[] = [
       { month: 'Jan', players: 180000 },
     ],
   },
+  {
+    genre: 'Survival',
+    stage: 'mature',
+    currentPlayers: 680000,
+    trend: 8,
+    color: '#14b8a6',
+    data: [
+      { month: 'Aug', players: 590000 },
+      { month: 'Sep', players: 610000 },
+      { month: 'Oct', players: 640000 },
+      { month: 'Nov', players: 660000 },
+      { month: 'Dec', players: 670000 },
+      { month: 'Jan', players: 680000 },
+    ],
+  },
+  {
+    genre: 'MMORPG',
+    stage: 'declining',
+    currentPlayers: 520000,
+    trend: -8,
+    color: '#ec4899',
+    data: [
+      { month: 'Aug', players: 620000 },
+      { month: 'Sep', players: 600000 },
+      { month: 'Oct', players: 580000 },
+      { month: 'Nov', players: 560000 },
+      { month: 'Dec', players: 540000 },
+      { month: 'Jan', players: 520000 },
+    ],
+  },
+  {
+    genre: 'Souls-like',
+    stage: 'growth',
+    currentPlayers: 380000,
+    trend: 22,
+    color: '#6366f1',
+    data: [
+      { month: 'Aug', players: 220000 },
+      { month: 'Sep', players: 260000 },
+      { month: 'Oct', players: 300000 },
+      { month: 'Nov', players: 340000 },
+      { month: 'Dec', players: 360000 },
+      { month: 'Jan', players: 380000 },
+    ],
+  },
+  {
+    genre: 'City Builder',
+    stage: 'mature',
+    currentPlayers: 290000,
+    trend: 3,
+    color: '#84cc16',
+    data: [
+      { month: 'Aug', players: 270000 },
+      { month: 'Sep', players: 275000 },
+      { month: 'Oct', players: 280000 },
+      { month: 'Nov', players: 285000 },
+      { month: 'Dec', players: 288000 },
+      { month: 'Jan', players: 290000 },
+    ],
+  },
+  {
+    genre: 'Deckbuilder',
+    stage: 'emerging',
+    currentPlayers: 150000,
+    trend: 38,
+    color: '#f472b6',
+    data: [
+      { month: 'Aug', players: 55000 },
+      { month: 'Sep', players: 75000 },
+      { month: 'Oct', players: 95000 },
+      { month: 'Nov', players: 115000 },
+      { month: 'Dec', players: 135000 },
+      { month: 'Jan', players: 150000 },
+    ],
+  },
+  {
+    genre: 'Racing',
+    stage: 'mature',
+    currentPlayers: 410000,
+    trend: 2,
+    color: '#f97316',
+    data: [
+      { month: 'Aug', players: 395000 },
+      { month: 'Sep', players: 400000 },
+      { month: 'Oct', players: 405000 },
+      { month: 'Nov', players: 408000 },
+      { month: 'Dec', players: 410000 },
+      { month: 'Jan', players: 410000 },
+    ],
+  },
+  {
+    genre: 'Horror',
+    stage: 'growth',
+    currentPlayers: 260000,
+    trend: 18,
+    color: '#dc2626',
+    data: [
+      { month: 'Aug', players: 160000 },
+      { month: 'Sep', players: 180000 },
+      { month: 'Oct', players: 220000 },
+      { month: 'Nov', players: 240000 },
+      { month: 'Dec', players: 250000 },
+      { month: 'Jan', players: 260000 },
+    ],
+  },
 ];
 
 const LIFECYCLE_CONFIG: Record<LifecycleStage, { label: string; color: string; bgColor: string; description: string }> = {
@@ -146,15 +251,32 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
   const [selectedGenres, setSelectedGenres] = useState<string[]>(
     GENRE_HISTORY.slice(0, 3).map(g => g.genre)
   );
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const toggleGenre = (genre: string) => {
-    setSelectedGenres(prev =>
-      prev.includes(genre)
-        ? prev.filter(g => g !== genre)
-        : [...prev, genre]
-    );
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const addGenre = (genre: string) => {
+    if (!selectedGenres.includes(genre)) {
+      setSelectedGenres(prev => [...prev, genre]);
+    }
+    setIsDropdownOpen(false);
   };
 
+  const removeGenre = (genre: string) => {
+    setSelectedGenres(prev => prev.filter(g => g !== genre));
+  };
+
+  const availableGenres = GENRE_HISTORY.filter(g => !selectedGenres.includes(g.genre));
   const filteredGenres = GENRE_HISTORY.filter(g => selectedGenres.includes(g.genre));
   const chartData = mergeDataForChart(filteredGenres);
 
@@ -189,34 +311,89 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
         ))}
       </div>
 
-      {/* Genre Selector */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {GENRE_HISTORY.map(genre => {
-          const isSelected = selectedGenres.includes(genre.genre);
+      {/* Genre Selector - Selected genres as removable chips + Add dropdown */}
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        {/* Selected genre chips */}
+        {filteredGenres.map(genre => {
           const stageConfig = LIFECYCLE_CONFIG[genre.stage];
           return (
-            <button
+            <div
               key={genre.genre}
-              onClick={() => toggleGenre(genre.genre)}
-              className={`px-3 py-2 rounded-lg border transition-all ${
-                isSelected
-                  ? 'bg-dark-600 border-dark-400'
-                  : 'bg-dark-700/50 border-dark-600 opacity-50 hover:opacity-75'
-              }`}
+              className="flex items-center gap-2 px-3 py-2 bg-dark-600 border border-dark-400 rounded-lg"
             >
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: genre.color }}
-                />
-                <span className="text-sm font-medium text-white">{genre.genre}</span>
-                <span className={`text-xs ${stageConfig.color}`}>
-                  {genre.trend > 0 ? '+' : ''}{genre.trend}%
-                </span>
-              </div>
-            </button>
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: genre.color }}
+              />
+              <span className="text-sm font-medium text-white">{genre.genre}</span>
+              <span className={`text-xs ${stageConfig.color}`}>
+                {genre.trend > 0 ? '+' : ''}{genre.trend}%
+              </span>
+              <button
+                onClick={() => removeGenre(genre.genre)}
+                className="ml-1 p-0.5 hover:bg-dark-500 rounded transition-colors"
+                title="Remove from chart"
+              >
+                <X className="h-3 w-3 text-dark-400 hover:text-white" />
+              </button>
+            </div>
           );
         })}
+
+        {/* Add Genre Dropdown */}
+        {availableGenres.length > 0 && (
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center gap-2 px-3 py-2 bg-dark-700/50 border border-dark-600 rounded-lg hover:border-purple-500/50 transition-colors"
+            >
+              <Plus className="h-4 w-4 text-purple-400" />
+              <span className="text-sm text-dark-300">Add Genre</span>
+              <ChevronDown className={`h-4 w-4 text-dark-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-64 bg-dark-800 border border-dark-600 rounded-xl shadow-xl z-50 overflow-hidden">
+                <div className="p-2 border-b border-dark-600">
+                  <p className="text-xs text-dark-400 uppercase tracking-wide">Available Genres</p>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {availableGenres.map(genre => {
+                    const stageConfig = LIFECYCLE_CONFIG[genre.stage];
+                    return (
+                      <button
+                        key={genre.genre}
+                        onClick={() => addGenre(genre.genre)}
+                        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-dark-700 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: genre.color }}
+                          />
+                          <span className="text-sm font-medium text-white">{genre.genre}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs ${stageConfig.color}`}>
+                            {genre.trend > 0 ? '+' : ''}{genre.trend}%
+                          </span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${stageConfig.bgColor} ${stageConfig.color}`}>
+                            {stageConfig.label}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Show count */}
+        <span className="text-xs text-dark-400 ml-2">
+          {selectedGenres.length} of {GENRE_HISTORY.length} genres selected
+        </span>
       </div>
 
       {/* Chart */}
