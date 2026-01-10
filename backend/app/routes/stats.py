@@ -8,6 +8,7 @@ from collections import Counter
 from app.database import get_db
 from app.models import Analysis
 from app.schemas import StatsResponse, AnalysisSummary, TagDistribution
+from app.services.trending import get_trending_data
 
 router = APIRouter(prefix="/api", tags=["stats"])
 
@@ -230,3 +231,27 @@ async def get_popular_games(db: AsyncSession = Depends(get_db), limit: int = 10)
     games_with_counts.sort(key=lambda x: x["tag_count"], reverse=True)
 
     return {"items": games_with_counts[:limit]}
+
+
+@router.get("/trending")
+async def get_trending(db: AsyncSession = Depends(get_db)):
+    """
+    Get trending games and hot genres from Steam.
+    Data is cached for 30 minutes to avoid rate limits.
+    """
+    # Get raw connection for asyncpg operations
+    raw_conn = await db.connection()
+
+    # Get trending data (cached)
+    data = await get_trending_data()
+
+    # Check which trending games are in our database
+    if data.get("trending_games"):
+        query = select(Analysis.game_name)
+        result = await db.execute(query)
+        db_games = {row[0].lower() for row in result.fetchall()}
+
+        for game in data["trending_games"]:
+            game["in_database"] = game["name"].lower() in db_games
+
+    return data

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
 
     # API Keys
     anthropic_api_key: str = ""
+    steam_api_key: str = ""  # Optional - SteamSpy works without auth
 
     # Database - Railway provides DATABASE_URL in postgres:// format
     # We need to convert to postgresql+asyncpg:// for SQLAlchemy async

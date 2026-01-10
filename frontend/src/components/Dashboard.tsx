@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { Target, Gamepad2, Trophy, X, ArrowUpRight, Zap, ExternalLink, CheckCircle, DollarSign, Layers, ShieldCheck, AlertTriangle, ChevronRight, Pencil, Trash2, Globe, Save, Loader2, Clock, Sparkles } from 'lucide-react';
-import { getStats, getPopularGames, getAnalysis, getHistory, updateAnalysis, deleteAnalysis, startTagging, getJobStatus, saveJobResult, type StatsResponse, type PopularGamesResponse, type AnalysisSummary, type AnalysisUpdate } from '../services/api';
+import { Target, Gamepad2, Trophy, X, ArrowUpRight, Zap, ExternalLink, CheckCircle, DollarSign, Layers, ShieldCheck, AlertTriangle, ChevronRight, Pencil, Trash2, Globe, Save, Loader2, Clock, Sparkles, Flame, Users, TrendingUp } from 'lucide-react';
+import { getStats, getPopularGames, getAnalysis, getHistory, updateAnalysis, deleteAnalysis, startTagging, getJobStatus, saveJobResult, getTrending, type StatsResponse, type PopularGamesResponse, type AnalysisSummary, type AnalysisUpdate, type TrendingResponse } from '../services/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import XboxStoreMockup from './XboxStoreMockup';
 
@@ -1025,6 +1025,14 @@ export default function Dashboard() {
     refetchInterval: 15000, // Refresh every 15 seconds to catch new analyses
   });
 
+  // Fetch trending data from Steam
+  const { data: trendingData, isLoading: trendingLoading } = useQuery<TrendingResponse>({
+    queryKey: ['trending'],
+    queryFn: getTrending,
+    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes (backend caches for 30)
+    staleTime: 2 * 60 * 1000, // Consider data stale after 2 minutes
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -1099,6 +1107,126 @@ export default function Dashboard() {
           subtitle="per game average"
         />
       </div>
+
+      {/* Trending on Steam */}
+      {trendingData && !trendingData.error && (
+        <div className="glass-card p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-500/10 rounded-lg border border-orange-500/20">
+                <Flame className="h-5 w-5 text-orange-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Trending on Steam</h3>
+                <p className="text-sm text-dark-300">
+                  {trendingData.total_players?.toLocaleString()} concurrent players across top games
+                </p>
+              </div>
+            </div>
+            <span className="text-xs text-dark-400">
+              Updated {new Date(trendingData.updated_at).toLocaleTimeString()}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Hot Genres */}
+            <div>
+              <h4 className="text-sm font-semibold text-dark-200 uppercase tracking-wide mb-4 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-orange-400" />
+                Hot Genres
+              </h4>
+              <div className="space-y-3">
+                {trendingData.hot_genres.slice(0, 6).map((genre, index) => (
+                  <div
+                    key={genre.genre}
+                    className="flex items-center justify-between p-3 bg-dark-700/50 rounded-lg border border-dark-600 hover:border-orange-500/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`text-lg font-bold ${index === 0 ? 'text-orange-400' : index === 1 ? 'text-orange-300' : index === 2 ? 'text-orange-200' : 'text-dark-400'}`}>
+                        #{index + 1}
+                      </span>
+                      <div>
+                        <p className="font-medium text-white">{genre.genre}</p>
+                        <p className="text-xs text-dark-400">
+                          {genre.game_count} games · Top: {genre.top_game || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-3 w-3 text-dark-400" />
+                      <span className="text-sm font-medium text-white">
+                        {genre.players >= 1000000
+                          ? `${(genre.players / 1000000).toFixed(1)}M`
+                          : genre.players >= 1000
+                          ? `${(genre.players / 1000).toFixed(0)}K`
+                          : genre.players}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Trending Games */}
+            <div>
+              <h4 className="text-sm font-semibold text-dark-200 uppercase tracking-wide mb-4 flex items-center gap-2">
+                <Gamepad2 className="h-4 w-4 text-orange-400" />
+                Trending Games
+              </h4>
+              <div className="space-y-2">
+                {trendingData.trending_games.slice(0, 8).map((game) => (
+                  <div
+                    key={game.app_id}
+                    className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
+                      game.in_database
+                        ? 'bg-xbox-green/5 border-xbox-green/20 hover:border-xbox-green/40'
+                        : 'bg-dark-700/50 border-dark-600 hover:border-orange-500/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {game.in_database ? (
+                        <CheckCircle className="h-4 w-4 text-xbox-green flex-shrink-0" />
+                      ) : (
+                        <div className="h-4 w-4 rounded-full border border-dark-500 flex-shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-white truncate">{game.name}</p>
+                        <p className="text-xs text-dark-400">{game.genre}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className="text-sm text-dark-300">
+                        {game.players >= 1000
+                          ? `${(game.players / 1000).toFixed(0)}K`
+                          : game.players}
+                      </span>
+                      {!game.in_database && (
+                        <button
+                          onClick={() => handleDeepAnalysis(game.name)}
+                          className="px-2 py-1 text-xs bg-orange-500/10 text-orange-400 border border-orange-500/30 rounded-lg hover:bg-orange-500/20 transition-colors"
+                          title="Tag this game"
+                        >
+                          Tag
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trending Loading State */}
+      {trendingLoading && (
+        <div className="glass-card p-6">
+          <div className="flex items-center gap-3">
+            <div className="loading-spinner h-5 w-5"></div>
+            <span className="text-dark-300">Loading trending data from Steam...</span>
+          </div>
+        </div>
+      )}
 
       {/* Quality & Cost Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

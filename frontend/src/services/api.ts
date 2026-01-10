@@ -193,3 +193,36 @@ export async function getPopularGames(limit: number = 10): Promise<PopularGamesR
   }
   return response.json();
 }
+
+// Trending data types
+export interface HotGenre {
+  genre: string;
+  players: number;
+  game_count: number;
+  top_game: string | null;
+}
+
+export interface TrendingGame {
+  name: string;
+  app_id: string;
+  players: number;
+  genre: string;
+  in_database: boolean;
+}
+
+export interface TrendingResponse {
+  hot_genres: HotGenre[];
+  trending_games: TrendingGame[];
+  updated_at: string;
+  total_players?: number;
+  games_fetched?: number;
+  error?: string;
+}
+
+export async function getTrending(): Promise<TrendingResponse> {
+  const response = await fetch(`${API_BASE}/trending`);
+  if (!response.ok) {
+    throw new Error(`Failed to get trending data: ${response.statusText}`);
+  }
+  return response.json();
+}
