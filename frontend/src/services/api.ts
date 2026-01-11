@@ -21,6 +21,7 @@ export interface JobCreatedResponse {
 export interface JobProgress {
   steam?: string;
   xbox?: string;
+  wikipedia?: string;
   youtube?: string;
   analysis?: string;
 }

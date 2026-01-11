@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api", tags=["tagging"])
 async def start_tagging_job(request: TagRequest, db: AsyncSession = Depends(get_db)):
     """Start a new game tagging job."""
     # Validate sources
-    valid_sources = {"steam", "xbox", "youtube"}
+    valid_sources = {"steam", "xbox", "wikipedia", "youtube"}
     sources = [s for s in request.sources if s in valid_sources]
 
     if not sources:
@@ -24,7 +24,7 @@ async def start_tagging_job(request: TagRequest, db: AsyncSession = Depends(get_
     # For deep analysis, ensure all sources are included
     quality = request.quality or "standard"
     if quality == "deep":
-        sources = ["steam", "xbox", "youtube"]
+        sources = ["steam", "xbox", "wikipedia", "youtube"]
 
     # Create job
     job_manager = get_job_manager()

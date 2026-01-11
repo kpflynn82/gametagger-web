@@ -35,6 +35,14 @@ const SOURCE_CONFIG = [
     color: 'source-xbox',
   },
   {
+    id: 'wikipedia',
+    label: 'Wikipedia',
+    description: 'Encyclopedia genre data',
+    time: '1-2s',
+    icon: '📚',
+    color: 'source-wikipedia',
+  },
+  {
     id: 'youtube',
     label: 'YouTube Video',
     description: 'Gameplay video analysis',
@@ -266,7 +274,7 @@ function ResultView({ result, onSave, isSaving }: { result: GameAnalysis; onSave
 
 export default function AnalyzePage() {
   const [gameName, setGameName] = useState('');
-  const [sources, setSources] = useState(['steam', 'xbox', 'youtube']);
+  const [sources, setSources] = useState(['steam', 'xbox', 'wikipedia', 'youtube']);
   const [jobId, setJobId] = useState<string | null>(null);
   const [result, setResult] = useState<GameAnalysis | null>(null);
   const [progress, setProgress] = useState<Record<string, string>>({});
@@ -461,6 +469,9 @@ export default function AnalyzePage() {
             )}
             {sources.includes('xbox') && (
               <ProgressStep label="Xbox Store" status={progress.xbox || 'pending'} />
+            )}
+            {sources.includes('wikipedia') && (
+              <ProgressStep label="Wikipedia" status={progress.wikipedia || 'pending'} />
             )}
             {sources.includes('youtube') && (
               <ProgressStep label="YouTube Video" status={progress.youtube || 'pending'} />

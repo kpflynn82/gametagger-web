@@ -116,6 +116,9 @@ body {
 .source-xbox {
   @apply bg-xbox-green/20 text-xbox-green-glow border border-xbox-green/30;
 }
+.source-wikipedia {
+  @apply bg-gray-500/20 text-gray-300 border border-gray-400/30;
+}
 .source-youtube {
   @apply bg-red-600/20 text-red-300 border border-red-500/30;
 }

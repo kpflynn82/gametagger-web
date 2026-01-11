@@ -109,7 +109,7 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
 
         # Source success rates
         sources_used = analysis.sources_used or []
-        for source in ['steam', 'xbox', 'youtube']:
+        for source in ['steam', 'xbox', 'wikipedia', 'youtube']:
             source_attempts[source] += 1
             if source in sources_used:
                 source_successes[source] += 1
@@ -137,7 +137,7 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
 
     # Source success rates
     source_success_rates = {}
-    for source in ['steam', 'xbox', 'youtube']:
+    for source in ['steam', 'xbox', 'wikipedia', 'youtube']:
         attempts = source_attempts[source]
         if attempts > 0:
             source_success_rates[source] = source_successes[source] / attempts

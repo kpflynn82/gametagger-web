@@ -483,6 +483,185 @@ class AsyncYouTubeSource:
             return {'source': 'youtube', 'success': False, 'error': f'YouTube error: {str(e)}'}
 
 
+class AsyncWikipediaSource:
+    """Async Wikipedia data fetcher - extracts genre info from game articles."""
+
+    # Wikipedia API requires a proper User-Agent header
+    HEADERS = {
+        'User-Agent': 'GameTagger/1.0 (https://gametagger.app; contact@gametagger.app) Python/httpx',
+        'Accept': 'application/json',
+    }
+
+    async def search(self, game_name: str) -> Optional[str]:
+        """Search Wikipedia for a game article, returns page title."""
+        from urllib.parse import quote
+
+        # Try searching with "video game" suffix for disambiguation
+        search_queries = [
+            f"{game_name} video game",
+            f"{game_name} game",
+            game_name,
+        ]
+
+        async with httpx.AsyncClient() as client:
+            for query in search_queries:
+                url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={quote(query)}&format=json&srlimit=5"
+                try:
+                    r = await client.get(url, headers=self.HEADERS, timeout=10)
+                    if r.status_code == 200:
+                        data = r.json()
+                        results = data.get('query', {}).get('search', [])
+                        for result in results:
+                            title = result.get('title', '').lower()
+                            # Check if it's likely a video game article
+                            if 'video game' in title or 'game' in title or game_name.lower() in title:
+                                return result.get('title')
+                        # If no game-specific result, use first result from first query
+                        if results and query == search_queries[0]:
+                            return results[0].get('title')
+                except Exception:
+                    continue
+        return None
+
+    async def fetch_page_content(self, title: str) -> Optional[dict]:
+        """Fetch Wikipedia page content and parse infobox."""
+        from urllib.parse import quote
+
+        async with httpx.AsyncClient() as client:
+            # Get page content with parsed text
+            url = f"https://en.wikipedia.org/w/api.php?action=query&titles={quote(title)}&prop=revisions|extracts&rvprop=content&exintro=true&explaintext=true&format=json"
+            try:
+                r = await client.get(url, headers=self.HEADERS, timeout=15)
+                if r.status_code != 200:
+                    return None
+
+                data = r.json()
+                pages = data.get('query', {}).get('pages', {})
+                if not pages:
+                    return None
+
+                page = list(pages.values())[0]
+                if 'missing' in page:
+                    return None
+
+                # Get the wikitext content
+                revisions = page.get('revisions', [])
+                wikitext = revisions[0].get('*', '') if revisions else ''
+
+                # Get the plain text extract (intro paragraph)
+                extract = page.get('extract', '')
+
+                return {
+                    'title': page.get('title', ''),
+                    'wikitext': wikitext,
+                    'extract': extract,
+                }
+            except Exception:
+                return None
+
+    def parse_infobox(self, wikitext: str) -> dict:
+        """Parse the infobox from wikitext to extract genre and other info."""
+        infobox_data = {}
+
+        # Common infobox patterns for video games
+        # Look for genre field
+        genre_patterns = [
+            r'\|\s*genre\s*=\s*([^\n\|]+)',
+            r'\|\s*genres\s*=\s*([^\n\|]+)',
+        ]
+        for pattern in genre_patterns:
+            match = re.search(pattern, wikitext, re.IGNORECASE)
+            if match:
+                genre_text = match.group(1).strip()
+                # Clean up wiki markup
+                genre_text = re.sub(r'\[\[([^\]|]+)\|?[^\]]*\]\]', r'\1', genre_text)  # [[Link|Text]] -> Link
+                genre_text = re.sub(r'\{\{[^}]+\}\}', '', genre_text)  # Remove templates
+                genre_text = re.sub(r'<[^>]+>', '', genre_text)  # Remove HTML tags
+                genre_text = re.sub(r"'''?", '', genre_text)  # Remove bold/italic
+                infobox_data['genres'] = [g.strip() for g in re.split(r'[,\n•]', genre_text) if g.strip()]
+                break
+
+        # Look for mode (single-player, multiplayer, etc.)
+        mode_patterns = [
+            r'\|\s*modes?\s*=\s*([^\n\|]+)',
+        ]
+        for pattern in mode_patterns:
+            match = re.search(pattern, wikitext, re.IGNORECASE)
+            if match:
+                mode_text = match.group(1).strip()
+                mode_text = re.sub(r'\[\[([^\]|]+)\|?[^\]]*\]\]', r'\1', mode_text)
+                mode_text = re.sub(r'\{\{[^}]+\}\}', '', mode_text)
+                mode_text = re.sub(r'<[^>]+>', '', mode_text)
+                infobox_data['modes'] = [m.strip() for m in re.split(r'[,\n•]', mode_text) if m.strip()]
+                break
+
+        # Look for developer
+        dev_patterns = [
+            r'\|\s*developer\s*=\s*([^\n\|]+)',
+        ]
+        for pattern in dev_patterns:
+            match = re.search(pattern, wikitext, re.IGNORECASE)
+            if match:
+                dev_text = match.group(1).strip()
+                dev_text = re.sub(r'\[\[([^\]|]+)\|?[^\]]*\]\]', r'\1', dev_text)
+                dev_text = re.sub(r'\{\{[^}]+\}\}', '', dev_text)
+                dev_text = re.sub(r'<[^>]+>', '', dev_text)
+                infobox_data['developer'] = dev_text.strip()
+                break
+
+        # Look for platform
+        platform_patterns = [
+            r'\|\s*platforms?\s*=\s*([^\n\|]+)',
+        ]
+        for pattern in platform_patterns:
+            match = re.search(pattern, wikitext, re.IGNORECASE)
+            if match:
+                platform_text = match.group(1).strip()
+                platform_text = re.sub(r'\[\[([^\]|]+)\|?[^\]]*\]\]', r'\1', platform_text)
+                platform_text = re.sub(r'\{\{[^}]+\}\}', '', platform_text)
+                platform_text = re.sub(r'<[^>]+>', '', platform_text)
+                infobox_data['platforms'] = [p.strip() for p in re.split(r'[,\n•]', platform_text) if p.strip()]
+                break
+
+        return infobox_data
+
+    async def fetch(self, game_name: str, progress_callback: Callable = None) -> dict:
+        """Fetch Wikipedia data for a game."""
+        if progress_callback:
+            await progress_callback('wikipedia', 'searching')
+
+        # Search for the game's Wikipedia page
+        title = await self.search(game_name)
+        if not title:
+            return {'source': 'wikipedia', 'success': False, 'error': 'Game not found on Wikipedia'}
+
+        if progress_callback:
+            await progress_callback('wikipedia', 'fetching')
+
+        # Fetch page content
+        page_data = await self.fetch_page_content(title)
+        if not page_data:
+            return {'source': 'wikipedia', 'success': False, 'error': 'Could not fetch Wikipedia page'}
+
+        # Parse infobox
+        infobox = self.parse_infobox(page_data.get('wikitext', ''))
+
+        if progress_callback:
+            await progress_callback('wikipedia', 'completed')
+
+        return {
+            'source': 'wikipedia',
+            'success': True,
+            'title': page_data.get('title', ''),
+            'description': page_data.get('extract', '')[:1500],  # First ~1500 chars of intro
+            'genres': infobox.get('genres', []),
+            'modes': infobox.get('modes', []),
+            'developer': infobox.get('developer', ''),
+            'platforms': infobox.get('platforms', []),
+            'wikipedia_url': f"https://en.wikipedia.org/wiki/{page_data.get('title', '').replace(' ', '_')}",
+        }
+
+
 class AsyncGameTagger:
     """Async game tagger service."""
 
@@ -492,6 +671,7 @@ class AsyncGameTagger:
         self.steam = AsyncSteamSource()
         self.xbox = AsyncXboxSource()
         self.youtube = AsyncYouTubeSource(self.temp_dir)
+        self.wikipedia = AsyncWikipediaSource()
 
     async def analyze_with_claude(self, game_name: str, sources: list, quality: str = "standard") -> dict:
         """Combine sources and analyze with Claude."""
@@ -542,6 +722,20 @@ class AsyncGameTagger:
                         "type": "image",
                         "source": {"type": "base64", "media_type": "image/jpeg", "data": ss}
                     })
+
+            elif src['source'] == 'wikipedia':
+                context_parts.append(f"WIKIPEDIA:")
+                context_parts.append(f"  Article: {src.get('title', 'Unknown')}")
+                if src.get('genres'):
+                    context_parts.append(f"  Genres (from infobox): {', '.join(src.get('genres', []))}")
+                if src.get('modes'):
+                    context_parts.append(f"  Game Modes: {', '.join(src.get('modes', []))}")
+                if src.get('developer'):
+                    context_parts.append(f"  Developer: {src.get('developer', '')}")
+                if src.get('platforms'):
+                    context_parts.append(f"  Platforms: {', '.join(src.get('platforms', []))}")
+                if src.get('description'):
+                    context_parts.append(f"  Description: {src.get('description', '')[:1000]}")
 
         context_text = '\n'.join(context_parts)
         prompt = ANALYSIS_PROMPT.format(game_name=game_name, context=context_text)
@@ -615,11 +809,11 @@ class AsyncGameTagger:
     ) -> dict:
         """Internal implementation of tag_game."""
         if sources is None:
-            sources = ['steam', 'xbox', 'youtube']
+            sources = ['steam', 'xbox', 'wikipedia', 'youtube']
 
         source_data = []
 
-        # Fetch Steam and Xbox concurrently with timeout (they're fast)
+        # Fetch Steam, Xbox, and Wikipedia concurrently with timeout (they're fast)
         tasks = []
 
         if 'steam' in sources:
@@ -630,6 +824,11 @@ class AsyncGameTagger:
         if 'xbox' in sources:
             tasks.append(asyncio.wait_for(
                 self.xbox.fetch(game_name, progress_callback),
+                timeout=30
+            ))
+        if 'wikipedia' in sources:
+            tasks.append(asyncio.wait_for(
+                self.wikipedia.fetch(game_name, progress_callback),
                 timeout=30
             ))
 
