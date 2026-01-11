@@ -382,13 +382,18 @@ export default function AnalyzePage() {
     onSuccess: (data: SuggestResponse) => {
       if (data.is_direct_match || data.candidates.length === 0) {
         // Direct match or no results - proceed directly to analysis
-        const titleToAnalyze = data.suggested_title || data.query;
+        // Use original query for search (works better with sources than Wikipedia titles with suffixes)
+        const titleToAnalyze = data.query;
         setGameName(titleToAnalyze);
         startMutation.mutate({ game_name: titleToAnalyze, sources });
       } else if (data.candidates.length === 1) {
-        // Single result - use it directly
-        setGameName(data.candidates[0].title);
-        startMutation.mutate({ game_name: data.candidates[0].title, sources });
+        // Single result - use cleaned title (remove Wikipedia suffixes)
+        const cleanTitle = data.candidates[0].title
+          .replace(/\s*\(\d{4}\s+video\s+game\)/i, '')
+          .replace(/\s*\(video\s+game\)/i, '')
+          .trim();
+        setGameName(cleanTitle);
+        startMutation.mutate({ game_name: cleanTitle, sources });
       } else {
         // Multiple candidates - show picker
         setCandidates(data.candidates);
@@ -443,8 +448,13 @@ export default function AnalyzePage() {
   };
 
   const handleCandidateSelect = (title: string) => {
-    setGameName(title);
-    startMutation.mutate({ game_name: title, sources });
+    // Clean Wikipedia suffixes from selected title
+    const cleanTitle = title
+      .replace(/\s*\(\d{4}\s+video\s+game\)/i, '')
+      .replace(/\s*\(video\s+game\)/i, '')
+      .trim();
+    setGameName(cleanTitle);
+    startMutation.mutate({ game_name: cleanTitle, sources });
   };
 
   const handleCancelPicker = () => {
