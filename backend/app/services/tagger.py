@@ -766,7 +766,17 @@ class AsyncGameTagger:
             response_text = response.content[0].text
             json_match = re.search(r'\{[\s\S]*\}', response_text)
             if json_match:
-                return json.loads(json_match.group())
+                result = json.loads(json_match.group())
+                # Flatten any nested tag objects (e.g., gameplay_tags: {gameplay_action: true})
+                flattened = {}
+                for key, value in result.items():
+                    if isinstance(value, dict) and key.endswith('_tags'):
+                        # Flatten nested tags
+                        for tag_key, tag_value in value.items():
+                            flattened[tag_key] = tag_value
+                    else:
+                        flattened[key] = value
+                return flattened
         except asyncio.TimeoutError:
             return {'error': 'Claude API timed out after 120 seconds'}
         except anthropic.APIConnectionError as e:
