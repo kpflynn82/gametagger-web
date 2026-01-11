@@ -881,8 +881,8 @@ class AsyncGameTagger:
             elif src['source'] == 'xbox':
                 context_parts.append(f"XBOX STORE:")
                 context_parts.append(f"  Title: {src.get('title', 'Unknown')}")
-                context_parts.append(f"  Categories: {', '.join(src.get('categories', []))}")
-                context_parts.append(f"  Description: {src.get('description', '')[:1000]}")
+                context_parts.append(f"  Categories: {', '.join(src.get('categories') or [])}")
+                context_parts.append(f"  Description: {(src.get('description') or '')[:1000]}")
                 for ss in src.get('screenshots', [])[:2]:
                     content.append({
                         "type": "image",
@@ -892,9 +892,9 @@ class AsyncGameTagger:
             elif src['source'] == 'steam':
                 context_parts.append(f"STEAM STORE:")
                 context_parts.append(f"  Title: {src.get('title', 'Unknown')}")
-                context_parts.append(f"  Genres: {', '.join(src.get('genres', []))}")
-                context_parts.append(f"  Categories: {', '.join(src.get('categories', []))}")
-                context_parts.append(f"  Description: {src.get('description', '')[:1000]}")
+                context_parts.append(f"  Genres: {', '.join(src.get('genres') or [])}")
+                context_parts.append(f"  Categories: {', '.join(src.get('categories') or [])}")
+                context_parts.append(f"  Description: {(src.get('description') or '')[:1000]}")
                 for ss in src.get('screenshots', [])[:2]:
                     content.append({
                         "type": "image",
@@ -905,15 +905,15 @@ class AsyncGameTagger:
                 context_parts.append(f"WIKIPEDIA:")
                 context_parts.append(f"  Article: {src.get('title', 'Unknown')}")
                 if src.get('genres'):
-                    context_parts.append(f"  Genres (from infobox): {', '.join(src.get('genres', []))}")
+                    context_parts.append(f"  Genres (from infobox): {', '.join(src.get('genres') or [])}")
                 if src.get('modes'):
-                    context_parts.append(f"  Game Modes: {', '.join(src.get('modes', []))}")
+                    context_parts.append(f"  Game Modes: {', '.join(src.get('modes') or [])}")
                 if src.get('developer'):
-                    context_parts.append(f"  Developer: {src.get('developer', '')}")
+                    context_parts.append(f"  Developer: {src.get('developer') or ''}")
                 if src.get('platforms'):
-                    context_parts.append(f"  Platforms: {', '.join(src.get('platforms', []))}")
+                    context_parts.append(f"  Platforms: {', '.join(src.get('platforms') or [])}")
                 if src.get('description'):
-                    context_parts.append(f"  Description: {src.get('description', '')[:1000]}")
+                    context_parts.append(f"  Description: {(src.get('description') or '')[:1000]}")
 
         context_text = '\n'.join(context_parts)
         prompt = ANALYSIS_PROMPT.format(game_name=game_name, context=context_text)
