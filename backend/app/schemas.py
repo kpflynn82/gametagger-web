@@ -8,14 +8,14 @@ from pydantic import BaseModel, Field
 class TagRequest(BaseModel):
     """Request to start a game tagging job."""
     game_name: str = Field(..., min_length=1, max_length=255)
-    sources: list[str] = Field(default=["steam", "xbox", "wikipedia", "youtube"])
+    sources: list[str] = Field(default=["wikipedia", "xbox", "steam"])
     quality: str = Field(default="standard", pattern="^(standard|deep)$")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "game_name": "Elden Ring",
-                "sources": ["steam", "xbox", "wikipedia", "youtube"],
+                "sources": ["wikipedia", "xbox", "steam"],
                 "quality": "standard"
             }
         }

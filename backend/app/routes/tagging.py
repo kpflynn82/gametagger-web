@@ -24,7 +24,7 @@ async def start_tagging_job(request: TagRequest, db: AsyncSession = Depends(get_
     # For deep analysis, ensure all sources are included
     quality = request.quality or "standard"
     if quality == "deep":
-        sources = ["steam", "xbox", "wikipedia", "youtube"]
+        sources = ["wikipedia", "xbox", "steam", "youtube"]
 
     # Create job
     job_manager = get_job_manager()

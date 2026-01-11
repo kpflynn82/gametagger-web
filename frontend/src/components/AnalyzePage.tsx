@@ -19,12 +19,12 @@ const TAG_CATEGORIES: Record<string, { label: string; color: string }> = {
 
 const SOURCE_CONFIG = [
   {
-    id: 'steam',
-    label: 'Steam Store',
-    description: 'Official store page data',
-    time: '1-3s',
-    icon: '🎮',
-    color: 'source-steam',
+    id: 'wikipedia',
+    label: 'Wikipedia',
+    description: 'Human-curated genre data',
+    time: '1-2s',
+    icon: '📚',
+    color: 'source-wikipedia',
   },
   {
     id: 'xbox',
@@ -35,12 +35,12 @@ const SOURCE_CONFIG = [
     color: 'source-xbox',
   },
   {
-    id: 'wikipedia',
-    label: 'Wikipedia',
-    description: 'Encyclopedia genre data',
-    time: '1-2s',
-    icon: '📚',
-    color: 'source-wikipedia',
+    id: 'steam',
+    label: 'Steam Store',
+    description: 'PC store page (fallback)',
+    time: '1-3s',
+    icon: '🎮',
+    color: 'source-steam',
   },
   {
     id: 'youtube',
@@ -274,7 +274,7 @@ function ResultView({ result, onSave, isSaving }: { result: GameAnalysis; onSave
 
 export default function AnalyzePage() {
   const [gameName, setGameName] = useState('');
-  const [sources, setSources] = useState(['steam', 'xbox', 'wikipedia', 'youtube']);
+  const [sources, setSources] = useState(['wikipedia', 'xbox', 'steam']);
   const [jobId, setJobId] = useState<string | null>(null);
   const [result, setResult] = useState<GameAnalysis | null>(null);
   const [progress, setProgress] = useState<Record<string, string>>({});

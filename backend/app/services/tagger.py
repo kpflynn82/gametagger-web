@@ -819,7 +819,7 @@ class AsyncGameTagger:
     ) -> dict:
         """Internal implementation of tag_game."""
         if sources is None:
-            sources = ['steam', 'xbox', 'wikipedia', 'youtube']
+            sources = ['wikipedia', 'xbox', 'steam']  # Wikipedia and Xbox first, Steam as fallback
 
         source_data = []
 
