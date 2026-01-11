@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, NavLink, useLocation, Link } from 'react-router-dom';
 import {
   Gamepad2,
   LayoutDashboard,
@@ -14,6 +14,7 @@ import Dashboard from './components/Dashboard';
 import AnalyzePage from './components/AnalyzePage';
 import HistoryPage from './components/HistoryPage';
 import TagGlossary from './components/TagGlossary';
+import AboutPage from './components/AboutPage';
 
 function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const location = useLocation();
@@ -122,6 +123,7 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
       case '/browse': return 'Browse Games';
       case '/add': return 'Add New Game';
       case '/glossary': return 'Tag Glossary';
+      case '/about': return 'About GameTagger';
       default: return 'GameTagger';
     }
   };
@@ -132,6 +134,7 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
       case '/browse': return 'Search and explore tagged games';
       case '/add': return 'Submit a new game for classification';
       case '/glossary': return 'Reference for all classification tags';
+      case '/about': return 'AI-powered game classification technology';
       default: return '';
     }
   };
@@ -176,6 +179,7 @@ function AppContent() {
               <Route path="/browse" element={<HistoryPage />} />
               <Route path="/add" element={<AnalyzePage />} />
               <Route path="/glossary" element={<TagGlossary />} />
+              <Route path="/about" element={<AboutPage />} />
               {/* Legacy routes redirect */}
               <Route path="/analyze" element={<AnalyzePage />} />
               <Route path="/history" element={<HistoryPage />} />
@@ -185,8 +189,11 @@ function AppContent() {
 
         {/* Footer */}
         <footer className="border-t border-dark-700 px-6 py-4">
-          <div className="max-w-7xl mx-auto text-center text-sm text-dark-300">
+          <div className="max-w-7xl mx-auto flex items-center justify-between text-sm text-dark-300">
             <span>GameTagger VGMS - Video Game Metadata System</span>
+            <Link to="/about" className="text-xbox-green hover:text-xbox-green-light transition-colors">
+              About
+            </Link>
           </div>
         </footer>
       </div>
