@@ -247,7 +247,7 @@ async def get_popular_games(db: AsyncSession = Depends(get_db), limit: int = 10)
 async def get_genre_stats(db: AsyncSession = Depends(get_db)):
     """
     Get genre statistics for the lifecycle timeline.
-    Returns all genres with game counts and sample games.
+    Returns all genres with popularity scores and sample games.
     """
     import random
 
@@ -281,7 +281,26 @@ async def get_genre_stats(db: AsyncSession = Depends(get_db)):
     genres = list(genre_data.values())
     genres.sort(key=lambda x: x["count"], reverse=True)
 
-    # Assign colors and simulated trends/stages
+    # Base popularity multipliers - simulates player interest per game in genre
+    # Larger genres typically have more casual appeal = higher per-game player counts
+    POPULARITY_MULTIPLIERS = {
+        "Action RPG": 15000,
+        "Action Adventure": 14000,
+        "First-Person Shooter": 18000,
+        "FPS": 18000,
+        "Battle Royale": 25000,
+        "MMORPG": 20000,
+        "Sports": 12000,
+        "Racing": 10000,
+        "Puzzle": 8000,
+        "Roguelike": 6000,
+        "Metroidvania": 5000,
+        "JRPG": 7000,
+        "Horror": 9000,
+        "Survival": 11000,
+    }
+    DEFAULT_MULTIPLIER = 8000
+
     # Colors palette for genres
     colors = [
         "#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7",
@@ -294,8 +313,16 @@ async def get_genre_stats(db: AsyncSession = Depends(get_db)):
     for i, genre in enumerate(genres):
         genre["color"] = colors[i % len(colors)]
 
+        # Calculate popularity score (simulated player count)
+        multiplier = POPULARITY_MULTIPLIERS.get(genre["genre"], DEFAULT_MULTIPLIER)
+        # Add some variance based on confidence (higher confidence = more popular)
+        confidence_bonus = 1 + (genre["high_confidence"] / max(genre["count"], 1)) * 0.3
+        base_popularity = int(genre["count"] * multiplier * confidence_bonus)
+        # Add random variance (±15%)
+        variance = random.uniform(0.85, 1.15)
+        genre["popularity"] = int(base_popularity * variance)
+
         # Determine lifecycle stage based on characteristics
-        # This is simplified - in production you'd track historical data
         confidence_ratio = genre["high_confidence"] / genre["count"] if genre["count"] > 0 else 0
 
         if genre["count"] <= 3:
@@ -312,24 +339,25 @@ async def get_genre_stats(db: AsyncSession = Depends(get_db)):
             genre["stage"] = "mature" if confidence_ratio > 0.5 else "declining"
             genre["trend"] = random.randint(-10, 10)
 
-        # Simulated historical data (6 months) based on current count and trend
-        base = max(1, genre["count"] - int(genre["count"] * abs(genre["trend"]) / 100 * 0.5))
+        # Simulated historical popularity data (6 months)
+        current_pop = genre["popularity"]
         months = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan"]
 
         if genre["trend"] > 0:
             # Growing - start lower
-            step = (genre["count"] - base) / 5
+            start_pop = int(current_pop * (1 - genre["trend"] / 100 * 0.6))
+            step = (current_pop - start_pop) / 5
             genre["history"] = [
-                {"month": m, "count": int(base + step * i)}
-                for i, m in enumerate(months)
+                {"month": m, "popularity": int(start_pop + step * idx + random.randint(-5000, 5000))}
+                for idx, m in enumerate(months)
             ]
         else:
-            # Declining or stable - start higher or flat
-            peak = int(genre["count"] * 1.2)
-            step = (peak - genre["count"]) / 5
+            # Declining or stable - start higher
+            peak_pop = int(current_pop * (1 + abs(genre["trend"]) / 100 * 0.6))
+            step = (peak_pop - current_pop) / 5
             genre["history"] = [
-                {"month": m, "count": int(peak - step * i)}
-                for i, m in enumerate(months)
+                {"month": m, "popularity": int(peak_pop - step * idx + random.randint(-5000, 5000))}
+                for idx, m in enumerate(months)
             ]
 
     return {

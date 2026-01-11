@@ -230,12 +230,13 @@ export async function getTrending(): Promise<TrendingResponse> {
 // Genre stats types
 export interface GenreHistoryPoint {
   month: string;
-  count: number;
+  popularity: number;
 }
 
 export interface GenreStat {
   genre: string;
   count: number;
+  popularity: number;
   games: string[];
   high_confidence: number;
   color: string;

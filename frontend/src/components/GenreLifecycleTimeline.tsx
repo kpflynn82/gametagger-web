@@ -10,11 +10,12 @@ type LifecycleStage = 'emerging' | 'growth' | 'mature' | 'declining';
 interface GenreData {
   genre: string;
   stage: LifecycleStage;
-  currentCount: number;
+  currentPopularity: number;
+  gameCount: number;
   trend: number; // percentage change
   color: string;
   games: string[];
-  data: { month: string; count: number }[];
+  data: { month: string; popularity: number }[];
 }
 
 // Transform API data to component format
@@ -22,11 +23,12 @@ function transformGenreData(genres: GenreStat[]): GenreData[] {
   return genres.map(g => ({
     genre: g.genre,
     stage: g.stage,
-    currentCount: g.count,
+    currentPopularity: g.popularity,
+    gameCount: g.count,
     trend: g.trend,
     color: g.color,
     games: g.games,
-    data: g.history.map(h => ({ month: h.month, count: h.count })),
+    data: g.history.map(h => ({ month: h.month, popularity: h.popularity })),
   }));
 }
 
@@ -57,8 +59,9 @@ const LIFECYCLE_CONFIG: Record<LifecycleStage, { label: string; color: string; b
   },
 };
 
-function formatCount(num: number): string {
-  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+function formatPopularity(num: number): string {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
   return num.toString();
 }
 
@@ -68,7 +71,7 @@ function mergeDataForChart(genres: GenreData[]) {
   return months.map((month, idx) => {
     const point: Record<string, string | number> = { month };
     genres.forEach(genre => {
-      point[genre.genre] = genre.data[idx]?.count || 0;
+      point[genre.genre] = genre.data[idx]?.popularity || 0;
     });
     return point;
   });
@@ -209,7 +212,7 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
           </div>
           <div>
             <h3 className="text-lg font-semibold text-white">Genre Lifecycle Trends</h3>
-            <p className="text-sm text-dark-300">6-month player count trends by genre</p>
+            <p className="text-sm text-dark-300">Relative popularity by genre (estimated player interest)</p>
           </div>
         </div>
       </div>
@@ -349,7 +352,7 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
             <YAxis
               stroke="#525252"
               tick={{ fill: '#a3a3a3', fontSize: 12 }}
-              tickFormatter={(value) => formatCount(value)}
+              tickFormatter={(value) => formatPopularity(value)}
             />
             <Tooltip
               contentStyle={{
@@ -361,7 +364,7 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
               }}
               labelStyle={{ color: '#fff', fontWeight: 600, marginBottom: '8px' }}
               itemStyle={{ color: '#a3a3a3', padding: '2px 0' }}
-              formatter={(value: number, name: string) => [`${value.toLocaleString()} games`, name]}
+              formatter={(value: number, name: string) => [`${formatPopularity(value)} players`, name]}
               cursor={{ stroke: '#525252', strokeDasharray: '4 4' }}
             />
             <Legend />
@@ -404,9 +407,9 @@ export default function GenreLifecycleTimeline({ className = '' }: GenreLifecycl
               <div className="flex items-end justify-between">
                 <div>
                   <p className="text-2xl font-bold text-white">
-                    {genre.currentCount}
+                    {formatPopularity(genre.currentPopularity)}
                   </p>
-                  <p className="text-xs text-dark-400">games in catalog</p>
+                  <p className="text-xs text-dark-400">est. players ({genre.gameCount} games)</p>
                 </div>
                 <div className={`flex items-center gap-1 ${genre.trend > 0 ? 'text-green-400' : genre.trend < 0 ? 'text-red-400' : 'text-dark-400'}`}>
                   {genre.trend > 0 ? (
