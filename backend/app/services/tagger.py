@@ -823,10 +823,25 @@ class AsyncGameTagger:
 
         unique_candidates.sort(key=sort_key)
 
-        # Determine if this is a direct match (single high-confidence result)
+        # Determine if this is a direct match (exact title match or single result)
+        # Normalize query for comparison
+        query_normalized = query_lower.strip()
+        for suffix in [' (video game)', ' video game', ' (game)', ' game']:
+            query_normalized = query_normalized.replace(suffix, '')
+
+        # Check if any candidate is an exact match (ignoring common suffixes)
+        exact_match_found = False
+        for c in unique_candidates:
+            candidate_normalized = c['title'].lower().strip()
+            for suffix in [' (video game)', ' video game', ' (game)', ' game']:
+                candidate_normalized = candidate_normalized.replace(suffix, '')
+            if query_normalized == candidate_normalized:
+                exact_match_found = True
+                break
+
         is_direct_match = (
             len(unique_candidates) == 1 or
-            (len(unique_candidates) > 0 and query_lower in unique_candidates[0]['title'].lower())
+            exact_match_found
         )
 
         return {
