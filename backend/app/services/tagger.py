@@ -897,4 +897,11 @@ class AsyncGameTagger:
             for s in successful
         }
 
+        # Validate: if no tags were extracted, confidence should be "low"
+        tag_count = sum(1 for k, v in result.items() if isinstance(v, bool) and v)
+        if tag_count == 0 and result.get('confidence') != 'low':
+            result['confidence'] = 'low'
+            result['analysis_notes'] = (result.get('analysis_notes', '') +
+                ' [Warning: No tags extracted, confidence downgraded to low]').strip()
+
         return result
