@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Search, Loader2, CheckCircle, XCircle, Clock, Save, Gamepad2, Info, Zap } from 'lucide-react';
-import { startTagging, saveJobResult, type JobCreatedResponse, type GameAnalysis } from '../services/api';
+import { Search, Loader2, CheckCircle, XCircle, Clock, Save, Gamepad2, Info, Zap, AlertTriangle } from 'lucide-react';
+import { startTagging, saveJobResult, suggestGames, type JobCreatedResponse, type GameAnalysis, type GameCandidate, type SuggestResponse } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 
 const TAG_CATEGORIES: Record<string, { label: string; color: string }> = {
@@ -126,10 +126,82 @@ function TagBadge({ tag, category }: { tag: string; category: string }) {
   );
 }
 
-function ResultView({ result, onSave, isSaving }: { result: GameAnalysis; onSave: () => void; isSaving: boolean }) {
+function CandidatePicker({
+  candidates,
+  query,
+  onSelect,
+  onCancel
+}: {
+  candidates: GameCandidate[];
+  query: string;
+  onSelect: (title: string) => void;
+  onCancel: () => void;
+}) {
+  // Group candidates by source for display
+  const sourceIcons: Record<string, string> = {
+    steam: '🎮',
+    xbox: '🟢',
+    wikipedia: '📚'
+  };
+
+  return (
+    <div className="glass-card p-8 animate-in">
+      <div className="flex items-center gap-4 mb-6">
+        <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
+          <AlertTriangle className="h-6 w-6 text-amber-400" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-white">Multiple Games Found</h2>
+          <p className="text-dark-300">
+            Your search for "<span className="text-white">{query}</span>" matched multiple games. Select the one you want to analyze:
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-2 mb-6">
+        {candidates.map((candidate, index) => (
+          <button
+            key={`${candidate.source}-${candidate.title}-${index}`}
+            onClick={() => onSelect(candidate.title)}
+            className="w-full flex items-center gap-4 p-4 rounded-xl border border-dark-600 bg-dark-700/50 hover:bg-dark-700 hover:border-xbox-green/50 transition-all duration-200 text-left"
+          >
+            <span className="text-2xl">{sourceIcons[candidate.source] || '🎮'}</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-white truncate">{candidate.title}</p>
+              {candidate.description && (
+                <p className="text-sm text-dark-300 truncate">{candidate.description}</p>
+              )}
+            </div>
+            {candidate.year && (
+              <span className="text-sm text-dark-400 flex-shrink-0">{candidate.year}</span>
+            )}
+            <span className={`text-xs px-2 py-1 rounded source-${candidate.source}`}>
+              {candidate.source}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-3">
+        <button
+          onClick={onCancel}
+          className="btn-secondary flex-1"
+        >
+          Back to Search
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ResultView({ result, originalQuery, onSave, isSaving }: { result: GameAnalysis; originalQuery: string; onSave: () => void; isSaving: boolean }) {
   // Group tags by category
   const groupedTags: Record<string, string[]> = {};
   const nitrogenTags: Record<string, string[]> = { engagement: [], monetization: [], protagonist: [] };
+
+  // Check if detected game differs from original query
+  const detectedGame = result.detected_game || result.game_name;
+  const showDetectedBanner = detectedGame.toLowerCase() !== originalQuery.toLowerCase();
 
   Object.entries(result).forEach(([key, value]) => {
     if (typeof value !== 'boolean' || !value) return;
@@ -161,6 +233,23 @@ function ResultView({ result, onSave, isSaving }: { result: GameAnalysis; onSave
 
   return (
     <div className="space-y-6 animate-in">
+      {/* Detected Game Banner */}
+      {showDetectedBanner && (
+        <div className="glass-card p-4 border-l-4 border-amber-500 bg-amber-500/5">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0" />
+            <div>
+              <p className="text-white font-medium">
+                Analyzed as: <span className="text-amber-400">{detectedGame}</span>
+              </p>
+              <p className="text-sm text-dark-300">
+                Your search "{originalQuery}" was matched to this game
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header Card */}
       <div className="glass-card p-6">
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
@@ -280,7 +369,33 @@ export default function AnalyzePage() {
   const [progress, setProgress] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
 
+  // Disambiguation state
+  const [candidates, setCandidates] = useState<GameCandidate[]>([]);
+  const [searchQuery, setSearchQuery] = useState(''); // Original query before disambiguation
+  const [showPicker, setShowPicker] = useState(false);
+
   const { lastMessage, isConnected } = useWebSocket(jobId);
+
+  // Search for candidates before starting analysis
+  const searchMutation = useMutation({
+    mutationFn: suggestGames,
+    onSuccess: (data: SuggestResponse) => {
+      if (data.is_direct_match || data.candidates.length === 0) {
+        // Direct match or no results - proceed directly to analysis
+        const titleToAnalyze = data.suggested_title || data.query;
+        setGameName(titleToAnalyze);
+        startMutation.mutate({ game_name: titleToAnalyze, sources });
+      } else if (data.candidates.length === 1) {
+        // Single result - use it directly
+        setGameName(data.candidates[0].title);
+        startMutation.mutate({ game_name: data.candidates[0].title, sources });
+      } else {
+        // Multiple candidates - show picker
+        setCandidates(data.candidates);
+        setShowPicker(true);
+      }
+    },
+  });
 
   const startMutation = useMutation({
     mutationFn: startTagging,
@@ -289,6 +404,7 @@ export default function AnalyzePage() {
       setResult(null);
       setProgress({});
       setSaved(false);
+      setShowPicker(false);
     },
   });
 
@@ -320,7 +436,21 @@ export default function AnalyzePage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!gameName.trim() || sources.length === 0) return;
-    startMutation.mutate({ game_name: gameName, sources });
+    // Store original query for later display
+    setSearchQuery(gameName.trim());
+    // Search for candidates first
+    searchMutation.mutate(gameName.trim());
+  };
+
+  const handleCandidateSelect = (title: string) => {
+    setGameName(title);
+    startMutation.mutate({ game_name: title, sources });
+  };
+
+  const handleCancelPicker = () => {
+    setShowPicker(false);
+    setCandidates([]);
+    setGameName(searchQuery); // Restore original query
   };
 
   const toggleSource = (source: string) => {
@@ -335,12 +465,26 @@ export default function AnalyzePage() {
     setResult(null);
     setProgress({});
     setSaved(false);
+    // Clear disambiguation state
+    setCandidates([]);
+    setSearchQuery('');
+    setShowPicker(false);
   };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-in">
+      {/* Candidate Picker */}
+      {showPicker && candidates.length > 0 && (
+        <CandidatePicker
+          candidates={candidates}
+          query={searchQuery}
+          onSelect={handleCandidateSelect}
+          onCancel={handleCancelPicker}
+        />
+      )}
+
       {/* Form */}
-      {!jobId && (
+      {!jobId && !showPicker && (
         <div className="glass-card p-8">
           <div className="flex items-center gap-4 mb-8">
             <div className="p-3 bg-xbox-green/10 rounded-xl border border-xbox-green/20">
@@ -427,18 +571,23 @@ export default function AnalyzePage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={!gameName.trim() || sources.length === 0 || startMutation.isPending}
+              disabled={!gameName.trim() || sources.length === 0 || searchMutation.isPending || startMutation.isPending}
               className="btn-xbox w-full py-4 text-lg flex items-center justify-center gap-3"
             >
-              {startMutation.isPending ? (
+              {searchMutation.isPending ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Searching...</span>
+                </>
+              ) : startMutation.isPending ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
                   <span>Starting Analysis...</span>
                 </>
               ) : (
                 <>
-                  <Gamepad2 className="h-5 w-5" />
-                  <span>Analyze Game</span>
+                  <Search className="h-5 w-5" />
+                  <span>Search & Analyze</span>
                 </>
               )}
             </button>
@@ -492,6 +641,7 @@ export default function AnalyzePage() {
         <>
           <ResultView
             result={result}
+            originalQuery={searchQuery || gameName}
             onSave={() => saveMutation.mutate()}
             isSaving={saveMutation.isPending}
           />

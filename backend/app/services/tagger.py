@@ -126,6 +126,28 @@ class AsyncSteamSource:
                 pass
         return None
 
+    async def search_multiple(self, game_name: str, limit: int = 5) -> list[dict]:
+        """Search Steam and return multiple candidate games."""
+        from urllib.parse import quote
+        url = f"https://store.steampowered.com/api/storesearch/?term={quote(game_name)}&l=english&cc=US"
+        candidates = []
+        async with httpx.AsyncClient() as client:
+            try:
+                r = await client.get(url, timeout=10)
+                if r.status_code == 200:
+                    data = r.json()
+                    for item in data.get('items', [])[:limit]:
+                        candidates.append({
+                            'source': 'steam',
+                            'source_id': str(item.get('id')),
+                            'title': item.get('name', ''),
+                            'description': None,
+                            'year': None
+                        })
+            except Exception:
+                pass
+        return candidates
+
     async def fetch_details(self, app_id: int) -> Optional[dict]:
         """Fetch app details from Steam API."""
         url = f"https://store.steampowered.com/api/appdetails?appids={app_id}&l=english"
@@ -246,6 +268,51 @@ class AsyncXboxSource:
             except Exception:
                 pass
         return None
+
+    async def search_multiple(self, game_name: str, limit: int = 5) -> list[dict]:
+        """Search Xbox and return multiple candidate games."""
+        from urllib.parse import quote
+        candidates = []
+
+        # Check known products first (exact match only)
+        product_id = self.KNOWN_PRODUCTS.get(game_name.lower())
+        if product_id:
+            candidates.append({
+                'source': 'xbox',
+                'source_id': product_id,
+                'title': game_name,
+                'description': None,
+                'year': None
+            })
+
+        # Search API for more candidates
+        url = f"https://storeedgefd.dsx.mp.microsoft.com/v9.0/search?market=US&locale=en-US&query={quote(game_name)}&mediaType=games"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json',
+        }
+
+        async with httpx.AsyncClient() as client:
+            try:
+                r = await client.get(url, headers=headers, timeout=15)
+                if r.status_code == 200:
+                    data = r.json()
+                    payload = data.get('Payload', {})
+                    for key in ['HighlightedList', 'SearchResults']:
+                        for item in payload.get(key, [])[:limit]:
+                            pid = item.get('ProductId')
+                            title = item.get('Title', '')
+                            if pid and not any(c['source_id'] == pid for c in candidates):
+                                candidates.append({
+                                    'source': 'xbox',
+                                    'source_id': pid,
+                                    'title': title,
+                                    'description': item.get('Description'),
+                                    'year': None
+                                })
+            except Exception:
+                pass
+        return candidates[:limit]
 
     async def fetch_product(self, product_id: str) -> Optional[dict]:
         """Fetch product details."""
@@ -523,6 +590,47 @@ class AsyncWikipediaSource:
                     continue
         return None
 
+    async def search_multiple(self, game_name: str, limit: int = 5) -> list[dict]:
+        """Search Wikipedia and return multiple candidate games."""
+        from urllib.parse import quote
+        import re
+        candidates = []
+        seen_titles = set()
+
+        # Search with "video game" suffix for best results
+        url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={quote(game_name + ' video game')}&format=json&srlimit=10"
+
+        async with httpx.AsyncClient() as client:
+            try:
+                r = await client.get(url, headers=self.HEADERS, timeout=10)
+                if r.status_code == 200:
+                    data = r.json()
+                    results = data.get('query', {}).get('search', [])
+                    for result in results:
+                        title = result.get('title', '')
+                        title_lower = title.lower()
+                        # Filter for game-related articles
+                        if ('video game' in title_lower or 'game' in title_lower or
+                            game_name.lower() in title_lower):
+                            if title not in seen_titles:
+                                seen_titles.add(title)
+                                # Extract year from title if present (e.g., "Game (2023 video game)")
+                                year_match = re.search(r'\((\d{4})', title)
+                                year = int(year_match.group(1)) if year_match else None
+                                candidates.append({
+                                    'source': 'wikipedia',
+                                    'source_id': title,
+                                    'title': title,
+                                    'description': result.get('snippet', '').replace('<span class="searchmatch">', '').replace('</span>', ''),
+                                    'year': year
+                                })
+                                if len(candidates) >= limit:
+                                    break
+            except Exception:
+                pass
+
+        return candidates
+
     async def fetch_page_content(self, title: str) -> Optional[dict]:
         """Fetch Wikipedia page content and parse infobox."""
         from urllib.parse import quote
@@ -672,6 +780,61 @@ class AsyncGameTagger:
         self.xbox = AsyncXboxSource()
         self.youtube = AsyncYouTubeSource(self.temp_dir)
         self.wikipedia = AsyncWikipediaSource()
+
+    async def search_candidates(self, query: str, limit: int = 8) -> dict:
+        """Search for candidate games across all sources before full analysis."""
+        all_candidates = []
+
+        # Search all sources concurrently
+        try:
+            wiki_task = self.wikipedia.search_multiple(query, limit=5)
+            xbox_task = self.xbox.search_multiple(query, limit=5)
+            steam_task = self.steam.search_multiple(query, limit=5)
+
+            results = await asyncio.gather(wiki_task, xbox_task, steam_task, return_exceptions=True)
+
+            for result in results:
+                if isinstance(result, list):
+                    all_candidates.extend(result)
+        except Exception:
+            pass
+
+        # Deduplicate by normalizing titles
+        seen_titles = set()
+        unique_candidates = []
+        for c in all_candidates:
+            # Normalize title for comparison
+            normalized = c['title'].lower().strip()
+            # Remove common suffixes for comparison
+            for suffix in [' (video game)', ' video game', ' (game)', ' game']:
+                normalized = normalized.replace(suffix, '')
+            if normalized not in seen_titles:
+                seen_titles.add(normalized)
+                unique_candidates.append(c)
+
+        # Sort by: Wikipedia first (more reliable), then by whether title contains query
+        query_lower = query.lower()
+        def sort_key(c):
+            title_lower = c['title'].lower()
+            # Exact match gets highest priority
+            if query_lower == title_lower or query_lower in title_lower:
+                return (0, c['source'] != 'wikipedia', c['title'])
+            return (1, c['source'] != 'wikipedia', c['title'])
+
+        unique_candidates.sort(key=sort_key)
+
+        # Determine if this is a direct match (single high-confidence result)
+        is_direct_match = (
+            len(unique_candidates) == 1 or
+            (len(unique_candidates) > 0 and query_lower in unique_candidates[0]['title'].lower())
+        )
+
+        return {
+            'query': query,
+            'candidates': unique_candidates[:limit],
+            'is_direct_match': is_direct_match and len(unique_candidates) > 0,
+            'suggested_title': unique_candidates[0]['title'] if unique_candidates else None
+        }
 
     async def analyze_with_claude(self, game_name: str, sources: list, quality: str = "standard") -> dict:
         """Combine sources and analyze with Claude."""

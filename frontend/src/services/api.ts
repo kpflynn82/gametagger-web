@@ -87,7 +87,31 @@ export interface StatsResponse {
   recent_analyses: AnalysisSummary[];
 }
 
+// Game suggestion types
+export interface GameCandidate {
+  source: string;  // "steam", "xbox", "wikipedia"
+  source_id?: string;
+  title: string;
+  description?: string;
+  year?: number;
+}
+
+export interface SuggestResponse {
+  query: string;
+  candidates: GameCandidate[];
+  is_direct_match: boolean;
+  suggested_title?: string;
+}
+
 // API functions
+export async function suggestGames(query: string): Promise<SuggestResponse> {
+  const response = await fetch(`${API_BASE}/suggest?query=${encodeURIComponent(query)}`);
+  if (!response.ok) {
+    throw new Error(`Failed to suggest games: ${response.statusText}`);
+  }
+  return response.json();
+}
+
 export async function startTagging(request: TagRequest): Promise<JobCreatedResponse> {
   const response = await fetch(`${API_BASE}/tag`, {
     method: 'POST',

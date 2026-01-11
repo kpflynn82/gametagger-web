@@ -5,10 +5,48 @@ from datetime import datetime
 
 from app.database import get_db
 from app.models import Analysis, Job
-from app.schemas import TagRequest, JobCreatedResponse, JobStatusResponse, JobProgress
+from app.schemas import TagRequest, JobCreatedResponse, JobStatusResponse, JobProgress, SuggestResponse, GameCandidate
 from app.services.job_manager import get_job_manager
+from app.services.tagger import AsyncGameTagger
+import os
 
 router = APIRouter(prefix="/api", tags=["tagging"])
+
+
+@router.get("/suggest", response_model=SuggestResponse)
+async def suggest_games(query: str):
+    """Search for candidate games before running full analysis.
+
+    Returns a list of matching games from Wikipedia, Xbox, and Steam.
+    If is_direct_match is True, the query matched a specific game and
+    can proceed directly to analysis.
+    """
+    if not query or len(query.strip()) < 2:
+        return SuggestResponse(query=query, candidates=[], is_direct_match=False)
+
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    tagger = AsyncGameTagger(api_key)
+
+    result = await tagger.search_candidates(query.strip())
+
+    # Convert to response model
+    candidates = [
+        GameCandidate(
+            source=c['source'],
+            source_id=c.get('source_id'),
+            title=c['title'],
+            description=c.get('description'),
+            year=c.get('year')
+        )
+        for c in result.get('candidates', [])
+    ]
+
+    return SuggestResponse(
+        query=query,
+        candidates=candidates,
+        is_direct_match=result.get('is_direct_match', False),
+        suggested_title=result.get('suggested_title')
+    )
 
 
 @router.post("/tag", response_model=JobCreatedResponse)

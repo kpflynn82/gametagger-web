@@ -21,6 +21,24 @@ class TagRequest(BaseModel):
         }
 
 
+# Game search/suggest schemas
+class GameCandidate(BaseModel):
+    """A candidate game from search results."""
+    source: str  # "steam", "xbox", "wikipedia"
+    source_id: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+    year: Optional[int] = None
+
+
+class SuggestResponse(BaseModel):
+    """Response from game suggestion/search endpoint."""
+    query: str
+    candidates: list[GameCandidate]
+    is_direct_match: bool = False
+    suggested_title: Optional[str] = None
+
+
 # Response schemas
 class JobCreatedResponse(BaseModel):
     """Response when a job is created."""
