@@ -44,6 +44,7 @@ export interface GameAnalysis {
   primary_genre?: string;
   analysis_notes?: string;
   sources_used?: string[];
+  source_urls?: Record<string, string>;  // URLs for each source (steam, xbox, wikipedia, youtube)
   tags?: Record<string, boolean>;  // Structured tags object
   [key: string]: unknown;  // For backward compatibility with flat boolean tags
 }

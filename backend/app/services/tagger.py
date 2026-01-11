@@ -213,7 +213,8 @@ class AsyncSteamSource:
             'genres': genres,
             'categories': categories,
             'screenshots': screenshots,
-            'app_id': app_id
+            'app_id': app_id,
+            'store_url': f"https://store.steampowered.com/app/{app_id}"
         }
 
 
@@ -387,7 +388,9 @@ class AsyncXboxSource:
             'description': localized.get('ProductDescription', ''),
             'publisher': localized.get('PublisherName', ''),
             'categories': properties.get('Categories', []),
-            'screenshots': screenshots
+            'screenshots': screenshots,
+            'product_id': product_id,
+            'store_url': f"https://www.xbox.com/en-US/games/store/game/{product_id}"
         }
 
 
@@ -1074,6 +1077,20 @@ class AsyncGameTagger:
             s['source']: {k: v for k, v in s.items() if k not in ['screenshots', 'frames']}
             for s in successful
         }
+
+        # Build source URLs for easy access
+        source_urls = {}
+        for s in successful:
+            source_name = s['source']
+            if source_name == 'steam' and s.get('store_url'):
+                source_urls['steam'] = s['store_url']
+            elif source_name == 'xbox' and s.get('store_url'):
+                source_urls['xbox'] = s['store_url']
+            elif source_name == 'wikipedia' and s.get('wikipedia_url'):
+                source_urls['wikipedia'] = s['wikipedia_url']
+            elif source_name == 'youtube' and s.get('video_url'):
+                source_urls['youtube'] = s['video_url']
+        result['source_urls'] = source_urls
 
         # Validate: if no tags were extracted, confidence should be "low"
         tag_count = sum(1 for k, v in result.items() if isinstance(v, bool) and v)

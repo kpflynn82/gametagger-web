@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Search, Loader2, CheckCircle, XCircle, Clock, Save, Gamepad2, Info, Zap, AlertTriangle } from 'lucide-react';
+import { Search, Loader2, CheckCircle, XCircle, Clock, Save, Gamepad2, Info, Zap, AlertTriangle, ChevronDown } from 'lucide-react';
 import { startTagging, saveJobResult, suggestGames, type JobCreatedResponse, type GameAnalysis, type GameCandidate, type SuggestResponse } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 
@@ -194,7 +194,25 @@ function CandidatePicker({
   );
 }
 
-function ResultView({ result, originalQuery, onSave, isSaving }: { result: GameAnalysis; originalQuery: string; onSave: () => void; isSaving: boolean }) {
+function ResultView({
+  result,
+  originalQuery,
+  onSave,
+  isSaving,
+  alternatives,
+  onSelectAlternative,
+  isReanalyzing
+}: {
+  result: GameAnalysis;
+  originalQuery: string;
+  onSave: () => void;
+  isSaving: boolean;
+  alternatives?: GameCandidate[];
+  onSelectAlternative?: (title: string) => void;
+  isReanalyzing?: boolean;
+}) {
+  const [showAlternatives, setShowAlternatives] = useState(false);
+
   // Group tags by category
   const groupedTags: Record<string, string[]> = {};
   const nitrogenTags: Record<string, string[]> = { engagement: [], monetization: [], protagonist: [] };
@@ -202,6 +220,11 @@ function ResultView({ result, originalQuery, onSave, isSaving }: { result: GameA
   // Check if detected game differs from original query
   const detectedGame = result.detected_game || result.game_name;
   const showDetectedBanner = detectedGame.toLowerCase() !== originalQuery.toLowerCase();
+
+  // Filter alternatives to exclude the current detected game
+  const availableAlternatives = alternatives?.filter(
+    alt => alt.title.toLowerCase() !== detectedGame.toLowerCase()
+  ) || [];
 
   Object.entries(result).forEach(([key, value]) => {
     if (typeof value !== 'boolean' || !value) return;
@@ -236,16 +259,68 @@ function ResultView({ result, originalQuery, onSave, isSaving }: { result: GameA
       {/* Detected Game Banner */}
       {showDetectedBanner && (
         <div className="glass-card p-4 border-l-4 border-amber-500 bg-amber-500/5">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0" />
-            <div>
-              <p className="text-white font-medium">
-                Analyzed as: <span className="text-amber-400">{detectedGame}</span>
-              </p>
-              <p className="text-sm text-dark-300">
-                Your search "{originalQuery}" was matched to this game
-              </p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0" />
+              <div>
+                <p className="text-white font-medium">
+                  Analyzed as: <span className="text-amber-400">{detectedGame}</span>
+                </p>
+                <p className="text-sm text-dark-300">
+                  Your search "{originalQuery}" was matched to this game
+                </p>
+              </div>
             </div>
+            {availableAlternatives.length > 0 && onSelectAlternative && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowAlternatives(!showAlternatives)}
+                  disabled={isReanalyzing}
+                  className="btn-secondary text-sm py-2 px-3 flex items-center gap-2"
+                >
+                  {isReanalyzing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Reanalyzing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Not this game?</span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${showAlternatives ? 'rotate-180' : ''}`} />
+                    </>
+                  )}
+                </button>
+                {showAlternatives && !isReanalyzing && (
+                  <div className="absolute right-0 mt-2 w-72 bg-dark-800 border border-dark-600 rounded-xl shadow-xl z-10 overflow-hidden">
+                    <div className="p-2 border-b border-dark-600">
+                      <p className="text-xs text-dark-300 px-2">Select the correct game:</p>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {availableAlternatives.map((alt, index) => (
+                        <button
+                          key={`${alt.source}-${alt.title}-${index}`}
+                          onClick={() => {
+                            setShowAlternatives(false);
+                            onSelectAlternative(alt.title);
+                          }}
+                          className="w-full text-left px-4 py-3 hover:bg-dark-700 transition-colors border-b border-dark-600/50 last:border-0"
+                        >
+                          <p className="text-white font-medium text-sm truncate">{alt.title}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`source-${alt.source} px-1.5 py-0.5 rounded text-[10px] font-medium`}>
+                              {alt.source}
+                            </span>
+                            {alt.year && (
+                              <span className="text-xs text-dark-400">{alt.year}</span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -262,11 +337,31 @@ function ResultView({ result, originalQuery, onSave, isSaving }: { result: GameA
               <span className={`confidence-${result.confidence} px-3 py-1.5 rounded-lg text-sm font-medium`}>
                 {result.confidence} confidence
               </span>
-              {result.sources_used?.map((source) => (
-                <span key={source} className={`source-${source} px-2 py-1 rounded-lg text-xs font-medium`}>
-                  {source}
-                </span>
-              ))}
+              {result.sources_used?.map((source) => {
+                const sourceUrl = result.source_urls?.[source];
+                if (sourceUrl) {
+                  return (
+                    <a
+                      key={source}
+                      href={sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`source-${source} px-2 py-1 rounded-lg text-xs font-medium hover:opacity-80 transition-opacity cursor-pointer inline-flex items-center gap-1`}
+                      title={`View on ${source}`}
+                    >
+                      {source}
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  );
+                }
+                return (
+                  <span key={source} className={`source-${source} px-2 py-1 rounded-lg text-xs font-medium`}>
+                    {source}
+                  </span>
+                );
+              })}
             </div>
           </div>
           <button
@@ -373,6 +468,7 @@ export default function AnalyzePage() {
   const [candidates, setCandidates] = useState<GameCandidate[]>([]);
   const [searchQuery, setSearchQuery] = useState(''); // Original query before disambiguation
   const [showPicker, setShowPicker] = useState(false);
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
 
   const { lastMessage, isConnected } = useWebSocket(jobId);
 
@@ -380,6 +476,9 @@ export default function AnalyzePage() {
   const searchMutation = useMutation({
     mutationFn: suggestGames,
     onSuccess: (data: SuggestResponse) => {
+      // Always store candidates for later use (alternative game selection)
+      setCandidates(data.candidates);
+
       if (data.is_direct_match || data.candidates.length === 0) {
         // Direct match or no results - proceed directly to analysis
         // Use original query for search (works better with sources than Wikipedia titles with suffixes)
@@ -396,7 +495,6 @@ export default function AnalyzePage() {
         startMutation.mutate({ game_name: cleanTitle, sources });
       } else {
         // Multiple candidates - show picker
-        setCandidates(data.candidates);
         setShowPicker(true);
       }
     },
@@ -430,10 +528,12 @@ export default function AnalyzePage() {
       setProgress((prev) => ({ ...prev, [source]: status }));
     } else if (lastMessage.type === 'completed') {
       setResult(lastMessage.result as GameAnalysis);
+      setIsReanalyzing(false);
     } else if (lastMessage.type === 'state') {
       setProgress(lastMessage.progress as Record<string, string>);
       if (lastMessage.status === 'completed' && lastMessage.result) {
         setResult(lastMessage.result as GameAnalysis);
+        setIsReanalyzing(false);
       }
     }
   }, [lastMessage]);
@@ -463,6 +563,20 @@ export default function AnalyzePage() {
     setGameName(searchQuery); // Restore original query
   };
 
+  const handleReanalyzeWithAlternative = (title: string) => {
+    // Clean Wikipedia suffixes from selected title
+    const cleanTitle = title
+      .replace(/\s*\(\d{4}\s+video\s+game\)/i, '')
+      .replace(/\s*\(video\s+game\)/i, '')
+      .trim();
+    setIsReanalyzing(true);
+    setGameName(cleanTitle);
+    setResult(null);
+    setProgress({});
+    setSaved(false);
+    startMutation.mutate({ game_name: cleanTitle, sources });
+  };
+
   const toggleSource = (source: string) => {
     setSources((prev) =>
       prev.includes(source) ? prev.filter((s) => s !== source) : [...prev, source]
@@ -479,6 +593,7 @@ export default function AnalyzePage() {
     setCandidates([]);
     setSearchQuery('');
     setShowPicker(false);
+    setIsReanalyzing(false);
   };
 
   return (
@@ -654,6 +769,9 @@ export default function AnalyzePage() {
             originalQuery={searchQuery || gameName}
             onSave={() => saveMutation.mutate()}
             isSaving={saveMutation.isPending}
+            alternatives={candidates}
+            onSelectAlternative={handleReanalyzeWithAlternative}
+            isReanalyzing={isReanalyzing}
           />
 
           {saved && (
