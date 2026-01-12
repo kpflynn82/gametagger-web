@@ -221,10 +221,37 @@ function ResultView({
   const detectedGame = result.detected_game || result.game_name;
   const showDetectedBanner = detectedGame.toLowerCase() !== originalQuery.toLowerCase();
 
+  // Helper to clean titles for comparison (remove Wikipedia suffixes)
+  const cleanTitleForComparison = (title: string) =>
+    title.replace(/\s*\(\d{4}\s+video\s+game\)/i, '')
+         .replace(/\s*\(video\s+game\)/i, '')
+         .trim()
+         .toLowerCase();
+
   // Filter alternatives to exclude the current detected game
   const availableAlternatives = alternatives?.filter(
-    alt => alt.title.toLowerCase() !== detectedGame.toLowerCase()
+    alt => cleanTitleForComparison(alt.title) !== cleanTitleForComparison(detectedGame)
   ) || [];
+
+  // Check if result is valid enough to save
+  const isSaveable = () => {
+    // Don't allow saving low confidence results
+    if (result.confidence === 'low') return false;
+
+    // Don't allow saving unknown/invalid games
+    const gameName = (result.detected_game || result.game_name || '').toLowerCase();
+    if (gameName.includes('unknown') || gameName.includes('invalid') || gameName === 'unclassifiable') {
+      return false;
+    }
+
+    // Don't allow saving if primary genre indicates invalid
+    const genre = (result.primary_genre || '').toLowerCase();
+    if (genre === 'unclassifiable' || genre === 'unknown') {
+      return false;
+    }
+
+    return true;
+  };
 
   Object.entries(result).forEach(([key, value]) => {
     if (typeof value !== 'boolean' || !value) return;
@@ -291,31 +318,37 @@ function ResultView({
                   )}
                 </button>
                 {showAlternatives && !isReanalyzing && (
-                  <div className="absolute right-0 mt-2 w-72 bg-dark-800 border border-dark-600 rounded-xl shadow-xl z-10 overflow-hidden">
-                    <div className="p-2 border-b border-dark-600">
-                      <p className="text-xs text-dark-300 px-2">Select the correct game:</p>
+                  <div className="absolute right-0 mt-2 w-80 bg-dark-900 border border-dark-500 rounded-xl shadow-2xl z-50">
+                    <div className="p-3 border-b border-dark-600 bg-dark-800 rounded-t-xl">
+                      <p className="text-sm text-dark-200 font-medium">Select the correct game:</p>
                     </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      {availableAlternatives.map((alt, index) => (
-                        <button
-                          key={`${alt.source}-${alt.title}-${index}`}
-                          onClick={() => {
-                            setShowAlternatives(false);
-                            onSelectAlternative(alt.title);
-                          }}
-                          className="w-full text-left px-4 py-3 hover:bg-dark-700 transition-colors border-b border-dark-600/50 last:border-0"
-                        >
-                          <p className="text-white font-medium text-sm truncate">{alt.title}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`source-${alt.source} px-1.5 py-0.5 rounded text-[10px] font-medium`}>
-                              {alt.source}
-                            </span>
-                            {alt.year && (
-                              <span className="text-xs text-dark-400">{alt.year}</span>
-                            )}
-                          </div>
-                        </button>
-                      ))}
+                    <div className="max-h-72 overflow-y-auto">
+                      {availableAlternatives.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-dark-400">
+                          No alternative games found
+                        </div>
+                      ) : (
+                        availableAlternatives.map((alt, index) => (
+                          <button
+                            key={`${alt.source}-${alt.title}-${index}`}
+                            onClick={() => {
+                              setShowAlternatives(false);
+                              onSelectAlternative(alt.title);
+                            }}
+                            className="w-full text-left px-4 py-3 bg-dark-900 hover:bg-dark-700 transition-colors border-b border-dark-700 last:border-0"
+                          >
+                            <p className="text-white font-medium text-sm">{alt.title}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`source-${alt.source} px-1.5 py-0.5 rounded text-[10px] font-medium`}>
+                                {alt.source}
+                              </span>
+                              {alt.year && (
+                                <span className="text-xs text-dark-400">{alt.year}</span>
+                              )}
+                            </div>
+                          </button>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
@@ -366,8 +399,9 @@ function ResultView({
           </div>
           <button
             onClick={onSave}
-            disabled={isSaving}
-            className="btn-xbox flex items-center gap-2 whitespace-nowrap"
+            disabled={isSaving || !isSaveable()}
+            className={`btn-xbox flex items-center gap-2 whitespace-nowrap ${!isSaveable() ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title={!isSaveable() ? 'Cannot save: low confidence or invalid game' : 'Save to database'}
           >
             {isSaving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
