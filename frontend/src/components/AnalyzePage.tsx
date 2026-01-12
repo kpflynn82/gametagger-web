@@ -285,7 +285,7 @@ function ResultView({
     <div className="space-y-6 animate-in">
       {/* Detected Game Banner */}
       {showDetectedBanner && (
-        <div className="glass-card p-4 border-l-4 border-amber-500 bg-amber-500/5">
+        <div className={`glass-card p-4 border-l-4 border-amber-500 bg-amber-500/5 ${showAlternatives ? 'relative z-50' : ''}`}>
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0" />
