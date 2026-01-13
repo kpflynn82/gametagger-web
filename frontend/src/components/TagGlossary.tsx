@@ -419,7 +419,7 @@ const COLOR_CLASSES: Record<string, { bg: string; text: string; border: string; 
   amber: { bg: 'bg-amber-500/10', text: 'text-amber-300', border: 'border-amber-500/30', icon: 'text-amber-400' },
   emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-300', border: 'border-emerald-500/30', icon: 'text-emerald-400' },
   pink: { bg: 'bg-pink-500/10', text: 'text-pink-300', border: 'border-pink-500/30', icon: 'text-pink-400' },
-  green: { bg: 'bg-xbox-green/10', text: 'text-xbox-green', border: 'border-xbox-green/30', icon: 'text-xbox-green' },
+  green: { bg: 'bg-emerald-500/15', text: 'text-emerald-300', border: 'border-emerald-500/40', icon: 'text-emerald-400' },
 };
 
 // Genre Section Component
@@ -479,8 +479,8 @@ function GenreSection({ isExpanded, onToggle, searchQuery }: { isExpanded: boole
                     <p className="text-sm text-dark-100 leading-relaxed">{data.description}</p>
                   </div>
                   <div className="flex items-center gap-2 ml-1">
-                    <span className="text-xs text-dark-300">Examples:</span>
-                    <span className="text-xs text-dark-200">{data.examples.join(', ')}</span>
+                    <span className="text-xs text-dark-200 font-medium">Examples:</span>
+                    <span className="text-xs text-white/70">{data.examples.join(', ')}</span>
                   </div>
                 </div>
               </div>
