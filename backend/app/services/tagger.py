@@ -76,6 +76,22 @@ VGMS_CATEGORIES = {
     ]
 }
 
+# Standardized primary genres (must match expanded_taxonomy.py)
+PRIMARY_GENRES_LIST = [
+    "Action", "Action RPG", "Action Adventure", "First-Person Shooter", "Third-Person Shooter", "Bullet Hell",
+    "JRPG", "Turn-Based RPG", "Tactical RPG", "MMORPG", "Roguelike",
+    "2D Platformer", "3D Platformer", "Metroidvania",
+    "Real-Time Strategy", "Turn-Based Strategy", "Tower Defense", "4X Strategy", "Grand Strategy",
+    "Life Simulation", "Farm Simulation", "Management Simulation", "Racing Simulation", "Flight Simulation", "City Builder",
+    "Puzzle", "Puzzle Platformer", "Match-3", "Physics Puzzle",
+    "Adventure", "Narrative Adventure", "Visual Novel",
+    "2D Fighting", "3D Fighting",
+    "Arcade Racing", "Kart Racing", "Rally Racing",
+    "Sports", "Horror",
+    "Card Game", "Deck Builder", "Board Game", "Digital TCG",
+    "Arcade", "Rhythm Game", "Party Game", "Battle Royale", "Sandbox", "Survival", "Idle Game", "Souls-like", "Immersive Sim", "Educational"
+]
+
 ANALYSIS_PROMPT = """Analyze this game and classify it using VGMS (Video Game Metadata Schema).
 
 GAME: {game_name}
@@ -101,7 +117,7 @@ Based on all available information, return a JSON object with:
 2. Metadata:
    - detected_game: The game name you identified
    - confidence: "high", "medium", or "low"
-   - primary_genre: The main genre (e.g., "Action RPG", "FPS", "Platformer")
+   - primary_genre: MUST be one of these exact values: {genres}
    - analysis_notes: Brief notes about classification reasoning
 
 Return ONLY valid JSON, no other text.
@@ -919,7 +935,8 @@ class AsyncGameTagger:
                     context_parts.append(f"  Description: {(src.get('description') or '')[:1000]}")
 
         context_text = '\n'.join(context_parts)
-        prompt = ANALYSIS_PROMPT.format(game_name=game_name, context=context_text)
+        genres_str = ', '.join(f'"{g}"' for g in PRIMARY_GENRES_LIST)
+        prompt = ANALYSIS_PROMPT.format(game_name=game_name, context=context_text, genres=genres_str)
         content.insert(0, {"type": "text", "text": prompt})
 
         # Run Claude API call in thread pool (it's sync) with timeout
@@ -1098,5 +1115,40 @@ class AsyncGameTagger:
             result['confidence'] = 'low'
             result['analysis_notes'] = (result.get('analysis_notes', '') +
                 ' [Warning: No tags extracted, confidence downgraded to low]').strip()
+
+        # Validate primary_genre against allowed list
+        current_genre = result.get('primary_genre', '')
+        if current_genre and current_genre not in PRIMARY_GENRES_LIST:
+            # Try to find closest match (case-insensitive)
+            genre_lower = current_genre.lower()
+            matched = None
+            for allowed in PRIMARY_GENRES_LIST:
+                if allowed.lower() == genre_lower:
+                    matched = allowed
+                    break
+                # Check if the allowed genre is contained in the response
+                if allowed.lower() in genre_lower or genre_lower in allowed.lower():
+                    matched = allowed
+                    break
+            if matched:
+                result['primary_genre'] = matched
+            else:
+                # Default to most likely based on gameplay tags
+                if result.get('gameplay_shooter') or result.get('gameplay_fps'):
+                    result['primary_genre'] = 'First-Person Shooter'
+                elif result.get('gameplay_rpg'):
+                    result['primary_genre'] = 'Action RPG'
+                elif result.get('gameplay_platformer'):
+                    result['primary_genre'] = '2D Platformer'
+                elif result.get('gameplay_strategy'):
+                    result['primary_genre'] = 'Real-Time Strategy'
+                elif result.get('gameplay_puzzle'):
+                    result['primary_genre'] = 'Puzzle'
+                elif result.get('gameplay_adventure'):
+                    result['primary_genre'] = 'Adventure'
+                elif result.get('gameplay_simulation'):
+                    result['primary_genre'] = 'Life Simulation'
+                else:
+                    result['primary_genre'] = 'Action'  # Safe default
 
         return result
