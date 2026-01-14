@@ -76,20 +76,44 @@ VGMS_CATEGORIES = {
     ]
 }
 
-# Standardized primary genres (must match expanded_taxonomy.py)
+# Standardized primary genres (must match expanded_taxonomy.py v3.2 - 50 genres)
 PRIMARY_GENRES_LIST = [
-    "Action", "Action RPG", "Action Adventure", "First-Person Shooter", "Third-Person Shooter", "Bullet Hell",
+    # Action-based (no generic "Action" - use specific sub-genres)
+    "Action RPG", "Action Adventure", "First-Person Shooter", "Third-Person Shooter", "Bullet Hell", "Beat 'em Up",
+    # Shooter sub-genres (distinct by progression/risk model)
+    "Looter Shooter",      # Persistent gear, PvE grind (Destiny, Borderlands, The Division)
+    "Extraction Shooter",  # Gear at risk, PvPvE sessions (Tarkov, Hunt: Showdown, The Finals)
+    # RPG variants
     "JRPG", "Turn-Based RPG", "Tactical RPG", "MMORPG", "Roguelike",
+    # Platformers
     "2D Platformer", "3D Platformer", "Metroidvania",
+    # Strategy
     "Real-Time Strategy", "Turn-Based Strategy", "Tower Defense", "4X Strategy", "Grand Strategy",
+    "Auto Battler",  # Automated combat, strategic setup (Teamfight Tactics, Dota Underlords)
+    "MOBA",          # Lane-pushing team PvP (League of Legends, Dota 2, Smite)
+    # Simulation
     "Life Simulation", "Farm Simulation", "Management Simulation", "Racing Simulation", "Flight Simulation", "City Builder",
+    # Puzzle
     "Puzzle", "Puzzle Platformer", "Match-3", "Physics Puzzle",
+    # Adventure
     "Adventure", "Narrative Adventure", "Visual Novel",
+    # Fighting
     "2D Fighting", "3D Fighting",
+    # Racing
     "Arcade Racing", "Kart Racing", "Rally Racing",
+    # Sports & Horror
     "Sports", "Horror",
+    # Card/Board
     "Card Game", "Deck Builder", "Board Game", "Digital TCG",
-    "Arcade", "Rhythm Game", "Party Game", "Battle Royale", "Sandbox", "Survival", "Idle Game", "Souls-like", "Immersive Sim", "Educational"
+    # Multiplayer-focused
+    "Battle Royale",  # Last standing, no gear persistence (Fortnite, PUBG, Apex Legends)
+    "Party Game",
+    # Sandbox/Survival
+    "Sandbox",
+    "Survival",
+    "Open World Survival Craft",  # Building + crafting + survival (Minecraft, Valheim, Rust)
+    # Other
+    "Arcade", "Rhythm Game", "Cozy Game", "Idle Game", "Souls-like", "Immersive Sim", "Educational"
 ]
 
 ANALYSIS_PROMPT = """Analyze this game and classify it using VGMS (Video Game Metadata Schema).
@@ -1148,7 +1172,11 @@ class AsyncGameTagger:
                     result['primary_genre'] = 'Adventure'
                 elif result.get('gameplay_simulation'):
                     result['primary_genre'] = 'Life Simulation'
+                elif result.get('gameplay_fighting'):
+                    result['primary_genre'] = '2D Fighting'
+                elif result.get('gameplay_racing'):
+                    result['primary_genre'] = 'Arcade Racing'
                 else:
-                    result['primary_genre'] = 'Action'  # Safe default
+                    result['primary_genre'] = 'Action Adventure'  # Safe default
 
         return result

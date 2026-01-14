@@ -2,15 +2,19 @@ import { useState } from 'react';
 import { Search, ChevronDown, ChevronRight, Gamepad2, BookOpen, Palette, Map, Wrench, Eye, Zap, DollarSign, User, Sparkles, Layers, Info } from 'lucide-react';
 
 // Primary Genre definitions - ONE genre per game (the defining classification)
-// Consolidated taxonomy v3.1 - 44 genres
+// Consolidated taxonomy v3.2 - 50 genres
 const GENRE_GLOSSARY: Record<string, { description: string; examples: string[] }> = {
-  // Action-based
-  "Action": { description: "Fast-paced combat emphasizing reflexes and physical challenges", examples: ["Devil May Cry 5", "Bayonetta", "God of War"] },
-  "Action RPG": { description: "Real-time combat combined with character progression and loot", examples: ["Diablo IV", "Elden Ring", "Path of Exile", "Torchlight"] },
-  "Action Adventure": { description: "Exploration and combat with puzzle-solving elements", examples: ["The Legend of Zelda", "Uncharted", "Tomb Raider"] },
-  "First-Person Shooter": { description: "Combat through the protagonist's eyes with ranged weapons", examples: ["DOOM Eternal", "Call of Duty", "Halo Infinite"] },
+  // Action-based (no generic "Action" - use specific sub-genres)
+  "Action RPG": { description: "Real-time combat combined with character progression, stats, and loot systems", examples: ["Diablo IV", "Elden Ring", "Path of Exile", "Torchlight"] },
+  "Action Adventure": { description: "Exploration and combat with puzzle-solving elements and narrative focus", examples: ["The Legend of Zelda", "Uncharted", "Tomb Raider", "God of War"] },
+  "First-Person Shooter": { description: "Combat through the protagonist's eyes with ranged weapons", examples: ["DOOM Eternal", "Call of Duty", "Halo Infinite", "Counter-Strike 2"] },
   "Third-Person Shooter": { description: "Ranged combat from behind-the-character camera perspective", examples: ["Gears of War", "Resident Evil 4", "Control"] },
   "Bullet Hell": { description: "Dodging dense projectile patterns requiring precise movement", examples: ["Touhou", "Ikaruga", "Mushihimesama"] },
+  "Beat 'em Up": { description: "Side-scrolling or arena melee combat against waves of enemies", examples: ["Streets of Rage 4", "River City Girls", "Devil May Cry 5", "Bayonetta"] },
+
+  // Shooter sub-genres (distinguished by progression and risk model)
+  "Looter Shooter": { description: "Shooting combined with persistent gear collection and PvE grinding - keep your loot forever", examples: ["Destiny 2", "Borderlands 3", "The Division 2", "Warframe"] },
+  "Extraction Shooter": { description: "PvPvE sessions where you risk losing your gear if you die before extracting", examples: ["Escape from Tarkov", "Hunt: Showdown", "The Finals", "Dark and Darker"] },
 
   // RPG variants
   "JRPG": { description: "Japanese-style RPG with turn-based combat and anime aesthetics", examples: ["Persona 5", "Final Fantasy", "Dragon Quest XI"] },
@@ -30,6 +34,8 @@ const GENRE_GLOSSARY: Record<string, { description: string; examples: string[] }
   "Tower Defense": { description: "Placing defensive structures to stop enemy waves", examples: ["Bloons TD 6", "Kingdom Rush", "Defense Grid"] },
   "4X Strategy": { description: "eXplore, eXpand, eXploit, eXterminate grand strategy", examples: ["Civilization VI", "Stellaris", "Endless Legend"] },
   "Grand Strategy": { description: "Large-scale geopolitical simulation with complex systems", examples: ["Crusader Kings III", "Europa Universalis IV", "Hearts of Iron IV"] },
+  "Auto Battler": { description: "Strategic unit placement with automated combat resolution", examples: ["Teamfight Tactics", "Dota Underlords", "Super Auto Pets"] },
+  "MOBA": { description: "Team-based PvP with lanes, heroes, and base destruction objectives", examples: ["League of Legends", "Dota 2", "Smite", "Heroes of the Storm"] },
 
   // Simulation
   "Life Simulation": { description: "Simulating daily life, relationships, and activities", examples: ["The Sims 4", "Animal Crossing", "Stardew Valley"] },
@@ -71,16 +77,22 @@ const GENRE_GLOSSARY: Record<string, { description: string; examples: string[] }
   // Sports
   "Sports": { description: "Athletic competition based on real or fictional sports", examples: ["FIFA", "NBA 2K", "Madden NFL", "Rocket League"] },
 
+  // Multiplayer-focused
+  "Battle Royale": { description: "Last-player-standing PvP in a shrinking arena - no gear carries between matches", examples: ["Fortnite", "PUBG", "Apex Legends", "Warzone"] },
+  "Party Game": { description: "Multiplayer minigames designed for social group play", examples: ["Mario Party", "Jackbox Party Pack", "Fall Guys"] },
+
+  // Sandbox/Survival (distinct categories)
+  "Sandbox": { description: "Open-ended creative gameplay with player-driven goals, minimal survival pressure", examples: ["Garry's Mod", "Roblox", "Dreams", "Minecraft Creative"] },
+  "Survival": { description: "Managing hunger, thirst, and threats - focus on staying alive", examples: ["Subnautica", "Don't Starve", "The Long Dark", "Green Hell"] },
+  "Open World Survival Craft": { description: "Building bases, crafting tools, and surviving together in persistent worlds", examples: ["Minecraft", "Valheim", "Rust", "ARK: Survival Evolved", "7 Days to Die"] },
+
   // Other
   "Arcade": { description: "Accessible action games with simple controls and pick-up-and-play design", examples: ["Enter the Gungeon", "Hotline Miami", "Pac-Man", "Geometry Wars"] },
   "Rhythm Game": { description: "Music-based gameplay synchronized to audio", examples: ["Beat Saber", "Guitar Hero", "Taiko no Tatsujin"] },
-  "Party Game": { description: "Multiplayer minigames for social group play", examples: ["Mario Party", "Jackbox Party Pack", "Fall Guys"] },
-  "Battle Royale": { description: "Last-player-standing multiplayer with shrinking arena", examples: ["Fortnite", "PUBG", "Apex Legends"] },
-  "Sandbox": { description: "Open-ended creative gameplay with player-driven goals", examples: ["Garry's Mod", "Roblox", "Dreams"] },
-  "Survival": { description: "Open-world resource gathering, crafting, and building while managing hunger, thirst, and environmental threats", examples: ["Subnautica", "Don't Starve", "Valheim", "Minecraft Survival", "The Forest"] },
+  "Cozy Game": { description: "Relaxing, low-stress gameplay focused on comfort and gentle progression", examples: ["Unpacking", "A Short Hike", "Spiritfarer", "Coffee Talk"] },
   "Idle Game": { description: "Passive progression with minimal active input", examples: ["Cookie Clicker", "Adventure Capitalist", "Melvor Idle"] },
   "Souls-like": { description: "Challenging action RPG with stamina combat and death penalties", examples: ["Dark Souls", "Elden Ring", "Lies of P"] },
-  "Immersive Sim": { description: "Systems-driven gameplay with multiple solutions", examples: ["Deus Ex", "Dishonored", "Prey"] },
+  "Immersive Sim": { description: "Systems-driven gameplay with multiple solutions and emergent possibilities", examples: ["Deus Ex", "Dishonored", "Prey"] },
   "Educational": { description: "Learning-focused gameplay with educational content", examples: ["Oregon Trail", "Kerbal Space Program", "Big Brain Academy"] },
 };
 

@@ -1,18 +1,22 @@
 """
-Expanded VGMS Taxonomy v3.1
+Expanded VGMS Taxonomy v3.2
 Based on analysis of 953 tagged games from the Nitrogen database.
-Consolidated taxonomy with 44 primary genres.
+Consolidated taxonomy with 50 primary genres.
 """
 
-# Standardized Primary Genres (consolidated to 44 genres)
+# Standardized Primary Genres (consolidated to 50 genres)
 PRIMARY_GENRES = {
-    # Action-based
-    "Action": ["action", "hack and slash", "beat em up", "brawler"],
+    # Action-based (removed generic "Action" - use specific sub-genres instead)
     "Action RPG": ["action rpg", "arpg", "action role-playing", "dungeon crawler", "dungeon crawling"],
     "Action Adventure": ["action adventure", "action-adventure"],
     "First-Person Shooter": ["fps", "first person shooter", "first-person shooter"],
     "Third-Person Shooter": ["tps", "third person shooter"],
     "Bullet Hell": ["bullet hell", "danmaku", "bullet hell shooter", "shmup", "shoot em up"],
+    "Beat 'em Up": ["beat em up", "beat 'em up", "brawler", "hack and slash", "character action"],
+
+    # Shooter sub-genres (distinct by progression/risk model)
+    "Looter Shooter": ["looter shooter", "loot shooter"],  # Persistent gear, PvE grind (Destiny, Borderlands)
+    "Extraction Shooter": ["extraction shooter", "extraction"],  # Gear at risk, PvPvE (Tarkov, Hunt)
 
     # RPG variants
     "JRPG": ["jrpg", "japanese rpg", "japanese role-playing"],
@@ -32,6 +36,8 @@ PRIMARY_GENRES = {
     "Tower Defense": ["tower defense", "td"],
     "4X Strategy": ["4x", "4x strategy"],
     "Grand Strategy": ["grand strategy", "historical strategy"],
+    "Auto Battler": ["auto battler", "autobattler", "auto chess"],
+    "MOBA": ["moba", "multiplayer online battle arena", "lane pushing"],
 
     # Simulation
     "Life Simulation": ["life sim", "life simulation", "virtual life"],
@@ -49,7 +55,7 @@ PRIMARY_GENRES = {
 
     # Adventure
     "Adventure": ["adventure", "story adventure", "point and click", "point-and-click", "graphic adventure"],
-    "Narrative Adventure": ["narrative adventure", "interactive story", "walking sim", "walking simulator", "exploration game"],
+    "Narrative Adventure": ["narrative adventure", "interactive story", "exploration game"],
     "Visual Novel": ["visual novel", "vn", "interactive fiction"],
 
     # Fighting
@@ -73,13 +79,19 @@ PRIMARY_GENRES = {
     "Board Game": ["board game", "digital board game"],
     "Digital TCG": ["tcg", "trading card", "digital tcg"],
 
+    # Multiplayer-focused
+    "Battle Royale": ["battle royale", "br"],  # Last standing, no gear persistence (Fortnite, PUBG)
+    "Party Game": ["party game", "party"],
+
+    # Sandbox/Survival
+    "Sandbox": ["sandbox", "creative sandbox"],
+    "Survival": ["survival", "survival game"],
+    "Open World Survival Craft": ["survival craft", "open world survival craft", "craft and survive"],  # Building + survival (Minecraft, Valheim)
+
     # Other
     "Arcade": ["arcade", "arcade action", "twin-stick shooter", "top-down shooter"],
     "Rhythm Game": ["rhythm", "music game", "rhythm action"],
-    "Party Game": ["party game", "party"],
-    "Battle Royale": ["battle royale", "br"],
-    "Sandbox": ["sandbox", "open world sandbox", "creative sandbox"],
-    "Survival": ["survival", "survival crafting", "survival game", "open world survival"],
+    "Cozy Game": ["cozy", "cozy game", "wholesome", "relaxing"],
     "Idle Game": ["idle", "clicker", "incremental"],
     "Souls-like": ["souls-like", "soulslike", "souls like"],
     "Immersive Sim": ["immersive sim", "immersive simulation"],
