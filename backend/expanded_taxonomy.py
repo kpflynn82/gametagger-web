@@ -1,10 +1,10 @@
 """
 Expanded VGMS Taxonomy v3.2
 Based on analysis of 953 tagged games from the Nitrogen database.
-Consolidated taxonomy with 50 primary genres.
+Consolidated taxonomy with 59 primary genres.
 """
 
-# Standardized Primary Genres (consolidated to 50 genres)
+# Standardized Primary Genres (consolidated to 59 genres)
 PRIMARY_GENRES = {
     # Action-based (removed generic "Action" - use specific sub-genres instead)
     "Action RPG": ["action rpg", "arpg", "action role-playing", "dungeon crawler", "dungeon crawling"],

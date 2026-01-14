@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Search, ChevronDown, ChevronRight, Gamepad2, BookOpen, Palette, Map, Wrench, Eye, Zap, DollarSign, User, Sparkles, Layers, Info } from 'lucide-react';
 
 // Primary Genre definitions - ONE genre per game (the defining classification)
-// Consolidated taxonomy v3.2 - 50 genres
+// Consolidated taxonomy v3.2 - 59 genres
 const GENRE_GLOSSARY: Record<string, { description: string; examples: string[] }> = {
   // Action-based (no generic "Action" - use specific sub-genres)
   "Action RPG": { description: "Real-time combat combined with character progression, stats, and loot systems", examples: ["Diablo IV", "Elden Ring", "Path of Exile", "Torchlight"] },
