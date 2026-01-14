@@ -1,12 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { Target, Gamepad2, Trophy, X, ArrowUpRight, Zap, ExternalLink, CheckCircle, DollarSign, Layers, ShieldCheck, AlertTriangle, ChevronRight, Pencil, Trash2, Globe, Save, Loader2, Clock, Sparkles, Flame, Users, TrendingUp } from 'lucide-react';
 import { getStats, getPopularGames, getAnalysis, getHistory, updateAnalysis, deleteAnalysis, startTagging, getJobStatus, saveJobResult, getTrending, type StatsResponse, type PopularGamesResponse, type AnalysisSummary, type AnalysisUpdate, type TrendingResponse } from '../services/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import XboxStoreMockup from './XboxStoreMockup';
-import GenreLifecycleTimeline from './GenreLifecycleTimeline';
-import ExecutiveHealthScorecard from './ExecutiveHealthScorecard';
+
+// Lazy load heavy modal components (only loaded when opened)
+const XboxStoreMockup = lazy(() => import('./XboxStoreMockup'));
+const GenreLifecycleTimeline = lazy(() => import('./GenreLifecycleTimeline'));
+const ExecutiveHealthScorecard = lazy(() => import('./ExecutiveHealthScorecard'));
+
+// Loading fallback for lazy components
+const ChartLoading = () => (
+  <div className="flex items-center justify-center h-full">
+    <div className="loading-spinner h-8 w-8"></div>
+  </div>
+);
 
 // Tag category configuration
 const TAG_CATEGORIES: Record<string, { label: string; color: string; prefix: string }> = {
@@ -995,15 +1004,16 @@ export default function Dashboard() {
     },
   });
 
-  const handleSaveGame = async (id: number, update: AnalysisUpdate) => {
+  // Memoized event handlers to prevent unnecessary re-renders
+  const handleSaveGame = useCallback(async (id: number, update: AnalysisUpdate) => {
     await updateMutation.mutateAsync({ id, update });
-  };
+  }, [updateMutation]);
 
-  const handleDeleteGame = async (id: number) => {
+  const handleDeleteGame = useCallback(async (id: number) => {
     await deleteMutation.mutateAsync(id);
-  };
+  }, [deleteMutation]);
 
-  const handleDeepAnalysis = async (gameName: string) => {
+  const handleDeepAnalysis = useCallback(async (gameName: string) => {
     try {
       // Start a deep analysis job
       const response = await startTagging({
@@ -1025,10 +1035,10 @@ export default function Dashboard() {
     } catch (error) {
       alert(`Failed to start deep analysis: ${error}`);
     }
-  };
+  }, []);
 
   // Replace original classification with deep analysis (deletes original, keeps deep)
-  const handleReplaceWithDeep = async (originalId: number, _deepId: number) => {
+  const handleReplaceWithDeep = useCallback(async (originalId: number, _deepId: number) => {
     try {
       // Delete the original record
       await deleteMutation.mutateAsync(originalId);
@@ -1040,19 +1050,7 @@ export default function Dashboard() {
     } catch (error) {
       alert(`Failed to replace: ${error}`);
     }
-  };
-
-  // Find related deep analysis for a game (used in edit modal)
-  const findRelatedDeepAnalysis = (game: AnalysisSummary): AnalysisSummary | null => {
-    if (!recentHistory?.items || game.quality === 'deep') return null;
-
-    const gameName = (game.detected_game || game.game_name).toLowerCase();
-    return recentHistory.items.find(item =>
-      item.quality === 'deep' &&
-      item.id !== game.id &&
-      (item.detected_game || item.game_name).toLowerCase() === gameName
-    ) || null;
-  };
+  }, [deleteMutation, queryClient]);
 
   const { data: stats, isLoading, error } = useQuery<StatsResponse>({
     queryKey: ['stats'],
@@ -1072,6 +1070,30 @@ export default function Dashboard() {
     refetchInterval: 15000, // Refresh every 15 seconds to catch new analyses
   });
 
+  // Memoized function to find related deep analysis for a game
+  const findRelatedDeepAnalysis = useCallback((game: AnalysisSummary): AnalysisSummary | null => {
+    if (!recentHistory?.items || game.quality === 'deep') return null;
+
+    const gameName = (game.detected_game || game.game_name).toLowerCase();
+    return recentHistory.items.find(item =>
+      item.quality === 'deep' &&
+      item.id !== game.id &&
+      (item.detected_game || item.game_name).toLowerCase() === gameName
+    ) || null;
+  }, [recentHistory?.items]);
+
+  // Click handlers for list items - using data attributes to avoid inline functions
+  const handleGameClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const gameId = e.currentTarget.dataset.gameId;
+    if (gameId) setSelectedGameId(Number(gameId));
+  }, []);
+
+  const handleXboxMockupClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    const gameId = e.currentTarget.dataset.gameId;
+    if (gameId) setXboxMockupGameId(Number(gameId));
+  }, []);
+
   // Fetch trending data from Steam
   const { data: trendingData, isLoading: trendingLoading } = useQuery<TrendingResponse>({
     queryKey: ['trending'],
@@ -1088,6 +1110,47 @@ export default function Dashboard() {
     );
   }
 
+  // Memoize chart data transformations to prevent recalculation on every render
+  const genreData = useMemo(() =>
+    stats?.top_genres.slice(0, 6).map((g) => ({
+      name: g.name,
+      count: g.count,
+    })) || [],
+    [stats?.top_genres]
+  );
+
+  const gameplayTags = useMemo(() =>
+    (stats?.tag_distribution.gameplay || []).slice(0, 8).map((t) => ({
+      name: t.tag_name.replace('gameplay_', ''),
+      count: t.count,
+    })),
+    [stats?.tag_distribution.gameplay]
+  );
+
+  const engagementTags = useMemo(() =>
+    (stats?.tag_distribution.engagement || []).slice(0, 6).map((t) => ({
+      name: t.tag_name.replace('engagement_', '').replace(/_/g, ' '),
+      count: t.count,
+    })),
+    [stats?.tag_distribution.engagement]
+  );
+
+  const monetizationTags = useMemo(() =>
+    (stats?.tag_distribution.monetization || []).slice(0, 4).map((t) => ({
+      name: t.tag_name.replace('monetization_', '').replace(/_/g, ' '),
+      count: t.count,
+    })),
+    [stats?.tag_distribution.monetization]
+  );
+
+  const protagonistTags = useMemo(() =>
+    (stats?.tag_distribution.protagonist || []).slice(0, 4).map((t) => ({
+      name: t.tag_name.replace('protagonist_', '').replace(/_/g, ' '),
+      count: t.count,
+    })),
+    [stats?.tag_distribution.protagonist]
+  );
+
   if (error || !stats) {
     return (
       <div className="glass-card p-6 border-l-4 border-red-500">
@@ -1096,34 +1159,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  // Prepare genre chart data
-  const genreData = stats.top_genres.slice(0, 6).map((g) => ({
-    name: g.name,
-    count: g.count,
-  }));
-
-  // Prepare gameplay tags for bar chart
-  const gameplayTags = (stats.tag_distribution.gameplay || []).slice(0, 8).map((t) => ({
-    name: t.tag_name.replace('gameplay_', ''),
-    count: t.count,
-  }));
-
-  // Prepare nitrogen tags for charts
-  const engagementTags = (stats.tag_distribution.engagement || []).slice(0, 6).map((t) => ({
-    name: t.tag_name.replace('engagement_', '').replace(/_/g, ' '),
-    count: t.count,
-  }));
-
-  const monetizationTags = (stats.tag_distribution.monetization || []).slice(0, 4).map((t) => ({
-    name: t.tag_name.replace('monetization_', '').replace(/_/g, ' '),
-    count: t.count,
-  }));
-
-  const protagonistTags = (stats.tag_distribution.protagonist || []).slice(0, 4).map((t) => ({
-    name: t.tag_name.replace('protagonist_', '').replace(/_/g, ' '),
-    count: t.count,
-  }));
 
   return (
     <div className="space-y-10 animate-in">
@@ -1165,8 +1200,10 @@ export default function Dashboard() {
           <h2 id="strategic-insights" className="text-lg font-semibold text-white">Strategic Insights</h2>
         </div>
 
-        {/* Genre Lifecycle Timeline */}
-        <GenreLifecycleTimeline />
+        {/* Genre Lifecycle Timeline - Lazy loaded */}
+        <Suspense fallback={<div className="glass-card p-6"><ChartLoading /></div>}>
+          <GenreLifecycleTimeline />
+        </Suspense>
 
       {/* Trending on Steam */}
       {trendingData && !trendingData.error && (
@@ -1307,15 +1344,17 @@ export default function Dashboard() {
           <h2 id="operational-health" className="text-lg font-semibold text-white">Operational Health</h2>
         </div>
 
-        {/* Tagging Health Scorecard */}
-        <ExecutiveHealthScorecard
-        totalGames={stats.total_analyses}
-        highConfidencePercent={stats.average_confidence}
-        gamesThisWeek={stats.analyses_this_week}
-        trendingAlignment={trendingData?.trending_games?.filter(g => g.in_database).length
-          ? trendingData.trending_games.filter(g => g.in_database).length / trendingData.trending_games.length
-          : 0.5}
-      />
+        {/* Tagging Health Scorecard - Lazy loaded */}
+        <Suspense fallback={<div className="glass-card p-6"><ChartLoading /></div>}>
+          <ExecutiveHealthScorecard
+            totalGames={stats.total_analyses}
+            highConfidencePercent={stats.average_confidence}
+            gamesThisWeek={stats.analyses_this_week}
+            trendingAlignment={trendingData?.trending_games?.filter(g => g.in_database).length
+              ? trendingData.trending_games.filter(g => g.in_database).length / trendingData.trending_games.length
+              : 0.5}
+          />
+        </Suspense>
 
       {/* Quality & Cost Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1564,7 +1603,8 @@ export default function Dashboard() {
               return (
                 <div
                   key={game.id}
-                  onClick={() => setSelectedGameId(game.id)}
+                  data-game-id={game.id}
+                  onClick={handleGameClick}
                   className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
                     isDeepAnalysis
                       ? 'bg-purple-500/5 border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/10'
@@ -1621,7 +1661,8 @@ export default function Dashboard() {
             {popularGames.items.slice(0, 10).map((game, index) => (
               <div
                 key={game.id}
-                onClick={() => setSelectedGameId(game.id)}
+                data-game-id={game.id}
+                onClick={handleGameClick}
                 className="flex items-center justify-between p-4 bg-dark-700/50 rounded-xl border border-dark-600 hover:border-xbox-green/30 hover:bg-dark-600/50 cursor-pointer transition-all duration-200"
               >
                 <div className="flex items-center gap-4">
@@ -1633,10 +1674,8 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setXboxMockupGameId(game.id);
-                    }}
+                    data-game-id={game.id}
+                    onClick={handleXboxMockupClick}
                     className="p-2 text-xbox-green/60 hover:text-xbox-green transition-colors rounded-lg hover:bg-xbox-green/10"
                     title="View Xbox Store Mockup"
                   >
@@ -1668,7 +1707,8 @@ export default function Dashboard() {
             {stats.recent_analyses.map((analysis) => (
               <div
                 key={analysis.id}
-                onClick={() => setSelectedGameId(analysis.id)}
+                data-game-id={analysis.id}
+                onClick={handleGameClick}
                 className="flex items-center justify-between p-4 bg-dark-700/50 rounded-xl border border-dark-600 hover:border-xbox-green/30 hover:bg-dark-600/50 cursor-pointer transition-all duration-200"
               >
                 <div>
@@ -1679,10 +1719,8 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setXboxMockupGameId(analysis.id);
-                    }}
+                    data-game-id={analysis.id}
+                    onClick={handleXboxMockupClick}
                     className="p-2 text-xbox-green/60 hover:text-xbox-green transition-colors rounded-lg hover:bg-xbox-green/10"
                     title="View Xbox Store Preview"
                   >
@@ -1709,12 +1747,14 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Xbox Store Mockup */}
+      {/* Xbox Store Mockup - Lazy loaded */}
       {xboxMockupGameId && (
-        <XboxStoreMockup
-          gameId={xboxMockupGameId}
-          onClose={() => setXboxMockupGameId(null)}
-        />
+        <Suspense fallback={<ChartLoading />}>
+          <XboxStoreMockup
+            gameId={xboxMockupGameId}
+            onClose={() => setXboxMockupGameId(null)}
+          />
+        </Suspense>
       )}
 
       {/* Review Panel */}
