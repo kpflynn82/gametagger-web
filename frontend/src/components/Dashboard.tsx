@@ -1,21 +1,12 @@
-import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { Target, Gamepad2, Trophy, X, ArrowUpRight, Zap, ExternalLink, CheckCircle, DollarSign, Layers, ShieldCheck, AlertTriangle, ChevronRight, Pencil, Trash2, Globe, Save, Loader2, Clock, Sparkles, Flame, Users, TrendingUp } from 'lucide-react';
 import { getStats, getPopularGames, getAnalysis, getHistory, updateAnalysis, deleteAnalysis, startTagging, getJobStatus, saveJobResult, getTrending, type StatsResponse, type PopularGamesResponse, type AnalysisSummary, type AnalysisUpdate, type TrendingResponse } from '../services/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-
-// Lazy load heavy modal components (only loaded when opened)
-const XboxStoreMockup = lazy(() => import('./XboxStoreMockup'));
-const GenreLifecycleTimeline = lazy(() => import('./GenreLifecycleTimeline'));
-const ExecutiveHealthScorecard = lazy(() => import('./ExecutiveHealthScorecard'));
-
-// Loading fallback for lazy components
-const ChartLoading = () => (
-  <div className="flex items-center justify-center h-full">
-    <div className="loading-spinner h-8 w-8"></div>
-  </div>
-);
+import XboxStoreMockup from './XboxStoreMockup';
+import GenreLifecycleTimeline from './GenreLifecycleTimeline';
+import ExecutiveHealthScorecard from './ExecutiveHealthScorecard';
 
 // Tag category configuration
 const TAG_CATEGORIES: Record<string, { label: string; color: string; prefix: string }> = {
@@ -1200,10 +1191,8 @@ export default function Dashboard() {
           <h2 id="strategic-insights" className="text-lg font-semibold text-white">Strategic Insights</h2>
         </div>
 
-        {/* Genre Lifecycle Timeline - Lazy loaded */}
-        <Suspense fallback={<div className="glass-card p-6"><ChartLoading /></div>}>
-          <GenreLifecycleTimeline />
-        </Suspense>
+        {/* Genre Lifecycle Timeline */}
+        <GenreLifecycleTimeline />
 
       {/* Trending on Steam */}
       {trendingData && !trendingData.error && (
@@ -1344,17 +1333,15 @@ export default function Dashboard() {
           <h2 id="operational-health" className="text-lg font-semibold text-white">Operational Health</h2>
         </div>
 
-        {/* Tagging Health Scorecard - Lazy loaded */}
-        <Suspense fallback={<div className="glass-card p-6"><ChartLoading /></div>}>
-          <ExecutiveHealthScorecard
-            totalGames={stats.total_analyses}
-            highConfidencePercent={stats.average_confidence}
-            gamesThisWeek={stats.analyses_this_week}
-            trendingAlignment={trendingData?.trending_games?.filter(g => g.in_database).length
-              ? trendingData.trending_games.filter(g => g.in_database).length / trendingData.trending_games.length
-              : 0.5}
-          />
-        </Suspense>
+        {/* Tagging Health Scorecard */}
+        <ExecutiveHealthScorecard
+          totalGames={stats.total_analyses}
+          highConfidencePercent={stats.average_confidence}
+          gamesThisWeek={stats.analyses_this_week}
+          trendingAlignment={trendingData?.trending_games?.filter(g => g.in_database).length
+            ? trendingData.trending_games.filter(g => g.in_database).length / trendingData.trending_games.length
+            : 0.5}
+        />
 
       {/* Quality & Cost Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1747,14 +1734,12 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Xbox Store Mockup - Lazy loaded */}
+      {/* Xbox Store Mockup */}
       {xboxMockupGameId && (
-        <Suspense fallback={<ChartLoading />}>
-          <XboxStoreMockup
-            gameId={xboxMockupGameId}
-            onClose={() => setXboxMockupGameId(null)}
-          />
-        </Suspense>
+        <XboxStoreMockup
+          gameId={xboxMockupGameId}
+          onClose={() => setXboxMockupGameId(null)}
+        />
       )}
 
       {/* Review Panel */}
