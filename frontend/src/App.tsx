@@ -15,6 +15,7 @@ import AnalyzePage from './components/AnalyzePage';
 import HistoryPage from './components/HistoryPage';
 import TagGlossary from './components/TagGlossary';
 import AboutPage from './components/AboutPage';
+import BulkImportPage from './components/BulkImportPage';
 
 function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const location = useLocation();
@@ -124,6 +125,7 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
       case '/add': return 'Add New Game';
       case '/glossary': return 'Tag Glossary';
       case '/about': return 'About GameTagger';
+      case '/bulk-import': return 'Bulk Genre Classifier';
       default: return 'GameTagger';
     }
   };
@@ -135,6 +137,7 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
       case '/add': return 'Submit a new game for classification';
       case '/glossary': return 'Reference for all classification tags';
       case '/about': return 'AI-powered game classification technology';
+      case '/bulk-import': return 'Classify games by primary genre only (admin)';
       default: return '';
     }
   };
@@ -180,6 +183,8 @@ function AppContent() {
               <Route path="/add" element={<AnalyzePage />} />
               <Route path="/glossary" element={<TagGlossary />} />
               <Route path="/about" element={<AboutPage />} />
+              {/* Hidden admin route - not in navigation */}
+              <Route path="/bulk-import" element={<BulkImportPage />} />
               {/* Legacy routes redirect */}
               <Route path="/analyze" element={<AnalyzePage />} />
               <Route path="/history" element={<HistoryPage />} />

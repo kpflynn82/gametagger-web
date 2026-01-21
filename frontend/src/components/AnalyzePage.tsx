@@ -11,7 +11,6 @@ const TAG_CATEGORIES: Record<string, { label: string; color: string }> = {
   setting: { label: 'Setting', color: 'tag-setting' },
   mechanic: { label: 'Mechanics', color: 'tag-mechanic' },
   visual: { label: 'Visual', color: 'tag-visual' },
-  features: { label: 'Features', color: 'tag-features' },
   engagement: { label: 'Engagement', color: 'tag-engagement' },
   monetization: { label: 'Monetization', color: 'tag-monetization' },
   protagonist: { label: 'Protagonist', color: 'tag-protagonist' },

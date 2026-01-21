@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, ChevronDown, ChevronRight, Gamepad2, BookOpen, Palette, Map, Wrench, Eye, Zap, DollarSign, User, Sparkles, Layers, Info } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Gamepad2, BookOpen, Palette, Map, Wrench, Zap, DollarSign, User, Sparkles, Layers, Info } from 'lucide-react';
 
 // Primary Genre definitions - ONE genre per game (the defining classification)
 // Consolidated taxonomy v3.2 - 59 genres
@@ -166,6 +166,7 @@ const TAG_GLOSSARY = {
       psychological: 'Mind-bending narratives exploring mental states and perception',
       dystopian: 'Oppressive societies with totalitarian control and social decay',
       satirical: 'Using humor and irony to critique society or human nature',
+      story_driven: 'Narrative-focused design with emphasis on plot and characters',
     },
   },
   theme: {
@@ -298,12 +299,10 @@ const TAG_GLOSSARY = {
       pattern_matching: 'Recognizing and replicating sequences or designs',
       logic_puzzles: 'Deduction and reasoning-based challenges',
       hidden_objects: 'Finding concealed items in complex scenes',
-      // Social
-      co_op: 'Cooperative multiplayer requiring teamwork',
-      pvp: 'Player versus player competitive combat',
-      guilds: 'Player organizations with shared goals and resources',
+      // Economy (social tags like pvp/co_op/guilds/leaderboards are in engagement)
       trading: 'Exchange of items between players',
-      leaderboards: 'Competitive ranking and score comparison',
+      // World design
+      open_world: 'Non-linear exploration of large, interconnected game worlds',
       // Meta features
       procedural_generation: 'Algorithmically created content for variety',
       new_game_plus: 'Replaying with carried-over progress or unlocks',
@@ -343,18 +342,6 @@ const TAG_GLOSSARY = {
       top_down: 'Overhead view looking down at the action',
       isometric: 'Angled overhead view with no perspective distortion',
       side_scrolling: 'Horizontal view typical of 2D platformers',
-    },
-  },
-  features: {
-    label: 'Features',
-    description: 'Game structure and design features',
-    icon: Eye,
-    color: 'gray',
-    tags: {
-      multiplayer: 'Online or local multi-player gameplay modes',
-      open_world: 'Non-linear exploration of large, interconnected game worlds',
-      procedural: 'Algorithmically generated content for varied experiences',
-      story_driven: 'Narrative-focused design with emphasis on plot and characters',
     },
   },
   engagement: {

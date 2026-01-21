@@ -198,12 +198,11 @@ MECHANIC_TAGS = {
     "hidden_objects": "Finding concealed items",
     "word_puzzles": "Language-based puzzles",
 
-    # Social/Multiplayer
-    "co_op": "Cooperative multiplayer",
-    "pvp": "Player versus player",
-    "guilds": "Player organizations",
+    # Economy (trading is a distinct mechanic; social tags like pvp/co_op/guilds/leaderboards are in ENGAGEMENT_TAGS)
     "trading": "Player-to-player exchange",
-    "leaderboards": "Competitive rankings",
+
+    # World design
+    "open_world": "Non-linear exploration of large interconnected game worlds",
 
     # Meta mechanics
     "procedural_generation": "Algorithmically created content",
@@ -346,6 +345,7 @@ NARRATIVE_TAGS = {
     "utopian": "Ideal society",
     "absurdist": "Irrational/meaningless themes",
     "satirical": "Mocking social commentary",
+    "story_driven": "Narrative-focused design with emphasis on plot and characters",
 }
 
 # Engagement/Monetization Tags (Nitrogen-specific)

@@ -34,13 +34,10 @@ const TAG_CATEGORIES: Record<string, { label: string; color: string; bgColor: st
   setting: { label: 'Setting', color: 'text-cyan-300', bgColor: 'bg-cyan-500/20', prefix: 'setting_' },
   mechanic: { label: 'Mechanics', color: 'text-teal-300', bgColor: 'bg-teal-500/20', prefix: 'mechanic_' },
   visual: { label: 'Visuals', color: 'text-violet-300', bgColor: 'bg-violet-500/20', prefix: 'visual_' },
-  features: { label: 'Features', color: 'text-gray-300', bgColor: 'bg-gray-500/20', prefix: '' },
   engagement: { label: 'Engagement', color: 'text-amber-300', bgColor: 'bg-amber-500/20', prefix: 'engagement_' },
   monetization: { label: 'Purchase Info', color: 'text-emerald-300', bgColor: 'bg-emerald-500/20', prefix: 'monetization_' },
   protagonist: { label: 'Main Character', color: 'text-pink-300', bgColor: 'bg-pink-500/20', prefix: 'protagonist_' },
 };
-
-const FEATURE_TAGS = ['multiplayer', 'open_world', 'procedural', 'story_driven'];
 
 // Helper function to format tag names for display
 function formatTagName(tag: string, prefix: string): string {
@@ -272,15 +269,12 @@ export default function XboxStoreMockup({ gameId, onClose }: XboxStoreMockupProp
       }
 
       // Find category for other tags
-      let foundCategory = 'features';
+      let foundCategory = 'gameplay'; // default fallback
       for (const [cat, config] of Object.entries(TAG_CATEGORIES)) {
         if (config.prefix && tag.startsWith(config.prefix)) {
           foundCategory = cat;
           break;
         }
-      }
-      if (FEATURE_TAGS.includes(tag)) {
-        foundCategory = 'features';
       }
 
       if (!groupedTags[foundCategory]) {

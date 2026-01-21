@@ -12,13 +12,10 @@ const TAG_CATEGORIES: Record<string, { label: string; color: string; prefix: str
   setting: { label: 'Setting', color: 'tag-setting', prefix: 'setting_' },
   mechanic: { label: 'Mechanic', color: 'tag-mechanic', prefix: 'mechanic_' },
   visual: { label: 'Visual', color: 'tag-visual', prefix: 'visual_' },
-  features: { label: 'Features', color: 'tag-features', prefix: '' },
   engagement: { label: 'Engagement', color: 'tag-engagement', prefix: 'engagement_' },
   monetization: { label: 'Monetization', color: 'tag-monetization', prefix: 'monetization_' },
   protagonist: { label: 'Protagonist', color: 'tag-protagonist', prefix: 'protagonist_' },
 };
-
-const FEATURE_TAGS = ['multiplayer', 'open_world', 'procedural', 'story_driven'];
 
 function GameDetailModal({ gameId, onClose, onOpenXboxMockup }: { gameId: number; onClose: () => void; onOpenXboxMockup: () => void }) {
   const { data: analysis, isLoading, error } = useQuery({
@@ -33,15 +30,12 @@ function GameDetailModal({ gameId, onClose, onOpenXboxMockup }: { gameId: number
       if (value !== true) return;
 
       // Find category
-      let foundCategory = 'features';
+      let foundCategory = 'gameplay'; // default fallback
       for (const [cat, config] of Object.entries(TAG_CATEGORIES)) {
         if (config.prefix && tag.startsWith(config.prefix)) {
           foundCategory = cat;
           break;
         }
-      }
-      if (FEATURE_TAGS.includes(tag)) {
-        foundCategory = 'features';
       }
 
       if (!groupedTags[foundCategory]) {

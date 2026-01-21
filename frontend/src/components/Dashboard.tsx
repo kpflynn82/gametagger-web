@@ -16,15 +16,12 @@ const TAG_CATEGORIES: Record<string, { label: string; color: string; prefix: str
   setting: { label: 'Setting', color: 'tag-setting', prefix: 'setting_' },
   mechanic: { label: 'Mechanic', color: 'tag-mechanic', prefix: 'mechanic_' },
   visual: { label: 'Visual', color: 'tag-visual', prefix: 'visual_' },
-  features: { label: 'Features', color: 'tag-features', prefix: '' },
   engagement: { label: 'Engagement', color: 'tag-engagement', prefix: 'engagement_' },
   monetization: { label: 'Monetization', color: 'tag-monetization', prefix: 'monetization_' },
   protagonist: { label: 'Protagonist', color: 'tag-protagonist', prefix: 'protagonist_' },
   accessibility: { label: 'Accessibility', color: 'tag-accessibility', prefix: 'accessibility_' },
   demographic: { label: 'Demographic', color: 'tag-demographic', prefix: 'demographic_' },
 };
-
-const FEATURE_TAGS = ['multiplayer', 'open_world', 'procedural', 'story_driven'];
 
 // Confidence level explanations
 const CONFIDENCE_EXPLANATIONS: Record<string, { short: string; detailed: string; bullets: string[] }> = {
@@ -110,15 +107,12 @@ function GameDetailModal({ gameId, onClose, onOpenXboxMockup }: { gameId: number
     Object.entries(analysis.tags).forEach(([tag, value]) => {
       if (value !== true) return;
 
-      let foundCategory = 'features';
+      let foundCategory = 'gameplay'; // default fallback
       for (const [cat, config] of Object.entries(TAG_CATEGORIES)) {
         if (config.prefix && tag.startsWith(config.prefix)) {
           foundCategory = cat;
           break;
         }
-      }
-      if (FEATURE_TAGS.includes(tag)) {
-        foundCategory = 'features';
       }
 
       if (!groupedTags[foundCategory]) {

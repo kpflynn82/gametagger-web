@@ -45,3 +45,33 @@ class Job(Base):
     created_at = Column(DateTime, server_default=func.now())
     started_at = Column(DateTime)
     completed_at = Column(DateTime)
+
+
+class BatchJob(Base):
+    """Batch genre classification job tracking."""
+    __tablename__ = "batch_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    batch_id = Column(String(36), unique=True, nullable=False, index=True)
+    status = Column(String(20), default="pending", index=True)  # pending, processing, completed, failed
+    total_games = Column(Integer, nullable=False)
+    processed_games = Column(Integer, default=0)
+    error_message = Column(String)
+
+    created_at = Column(DateTime, server_default=func.now())
+    completed_at = Column(DateTime)
+
+
+class BatchResult(Base):
+    """Individual game result within a batch job."""
+    __tablename__ = "batch_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    batch_id = Column(String(36), nullable=False, index=True)
+    game_name = Column(String(500), nullable=False)
+    detected_game = Column(String(500))
+    primary_genre = Column(String(100))
+    confidence = Column(String(20))
+    error = Column(String)
+
+    created_at = Column(DateTime, server_default=func.now())

@@ -284,3 +284,91 @@ export async function getGenreStats(): Promise<GenreStatsResponse> {
   }
   return response.json();
 }
+
+// Batch classification types
+export interface BatchJobResponse {
+  batch_id: string;
+  status: string;
+  total_games: number;
+  message: string;
+}
+
+export interface BatchStatusResponse {
+  batch_id: string;
+  status: string;
+  total_games: number;
+  processed_games: number;
+  progress_percent: number;
+  created_at: string;
+  completed_at?: string;
+  error_message?: string;
+}
+
+export interface BatchResultItem {
+  game_name: string;
+  detected_game?: string;
+  primary_genre?: string;
+  confidence?: string;
+  error?: string;
+}
+
+export interface BatchResultsResponse {
+  batch_id: string;
+  status: string;
+  total_games: number;
+  results: BatchResultItem[];
+}
+
+export interface BatchJobSummary {
+  batch_id: string;
+  status: string;
+  total_games: number;
+  processed_games: number;
+  created_at: string;
+  completed_at?: string;
+}
+
+// Batch classification API functions
+export async function startBatchClassify(games: string[]): Promise<BatchJobResponse> {
+  const response = await fetch(`${API_BASE}/batch/classify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ games }),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to start batch: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function getBatchStatus(batchId: string): Promise<BatchStatusResponse> {
+  const response = await fetch(`${API_BASE}/batch/${batchId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to get batch status: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function getBatchResults(batchId: string): Promise<BatchResultsResponse> {
+  const response = await fetch(`${API_BASE}/batch/${batchId}/results`);
+  if (!response.ok) {
+    throw new Error(`Failed to get batch results: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function downloadBatchResults(batchId: string): Promise<Blob> {
+  const response = await fetch(`${API_BASE}/batch/${batchId}/download`);
+  if (!response.ok) {
+    throw new Error(`Failed to download results: ${response.statusText}`);
+  }
+  return response.blob();
+}
+
+export async function listBatchJobs(): Promise<{ jobs: BatchJobSummary[] }> {
+  const response = await fetch(`${API_BASE}/batch/`);
+  if (!response.ok) {
+    throw new Error(`Failed to list batch jobs: ${response.statusText}`);
+  }
+  return response.json();
+}

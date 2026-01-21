@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import get_settings
 from app.database import init_db
 from app.services.job_manager import init_job_manager
-from app.routes import tagging, history, stats, websocket
+from app.routes import tagging, history, stats, websocket, batch
 
 
 @asynccontextmanager
@@ -65,6 +65,7 @@ app.include_router(tagging.router)
 app.include_router(history.router)
 app.include_router(stats.router)
 app.include_router(websocket.router)
+app.include_router(batch.router)
 
 
 # Health check endpoints
