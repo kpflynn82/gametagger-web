@@ -7,10 +7,9 @@ import {
   BookOpen,
   Menu,
   X,
-  ExternalLink,
-  PartyPopper
+  ExternalLink
 } from 'lucide-react';
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import Dashboard from './components/Dashboard';
 import AnalyzePage from './components/AnalyzePage';
 import HistoryPage from './components/HistoryPage';
@@ -116,117 +115,8 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   );
 }
 
-function useConfetti() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const animationRef = useRef<number>(0);
-
-  const fire = useCallback(() => {
-    if (canvasRef.current) {
-      canvasRef.current.remove();
-      cancelAnimationFrame(animationRef.current);
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.style.position = 'fixed';
-    canvas.style.inset = '0';
-    canvas.style.pointerEvents = 'none';
-    canvas.style.zIndex = '9999';
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    document.body.appendChild(canvas);
-    canvasRef.current = canvas;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const colors = [
-      '#a855f7', '#ec4899', '#f43f5e', '#f97316', '#eab308',
-      '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ffffff',
-    ];
-
-    interface Particle {
-      x: number; y: number; vx: number; vy: number;
-      size: number; color: string; rotation: number;
-      rotationSpeed: number; opacity: number; shape: number;
-    }
-
-    const particles: Particle[] = Array.from({ length: 150 }, () => ({
-      x: window.innerWidth / 2,
-      y: window.innerHeight / 2 - 100,
-      vx: (Math.random() - 0.5) * 20,
-      vy: Math.random() * -18 - 4,
-      size: Math.random() * 8 + 3,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      rotation: Math.random() * Math.PI * 2,
-      rotationSpeed: (Math.random() - 0.5) * 0.3,
-      opacity: 1,
-      shape: Math.floor(Math.random() * 3),
-    }));
-
-    const startTime = performance.now();
-    const duration = 3000;
-
-    const animate = (now: number) => {
-      const elapsed = now - startTime;
-      if (elapsed > duration) {
-        canvas.remove();
-        canvasRef.current = null;
-        return;
-      }
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      for (const p of particles) {
-        p.vy += 0.4;
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vx *= 0.99;
-        p.rotation += p.rotationSpeed;
-        p.opacity = Math.max(0, 1 - elapsed / duration);
-
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rotation);
-        ctx.globalAlpha = p.opacity;
-        ctx.fillStyle = p.color;
-
-        if (p.shape === 0) {
-          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
-        } else if (p.shape === 1) {
-          ctx.beginPath();
-          ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
-          ctx.fill();
-        } else {
-          ctx.beginPath();
-          ctx.moveTo(0, -p.size / 2);
-          ctx.lineTo(p.size / 2, p.size / 2);
-          ctx.lineTo(-p.size / 2, p.size / 2);
-          ctx.closePath();
-          ctx.fill();
-        }
-
-        ctx.restore();
-      }
-
-      animationRef.current = requestAnimationFrame(animate);
-    };
-
-    animationRef.current = requestAnimationFrame(animate);
-  }, []);
-
-  return fire;
-}
-
 function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const location = useLocation();
-  const fireConfetti = useConfetti();
-  const [partyMode, setPartyMode] = useState(false);
-
-  const handlePartyMode = () => {
-    setPartyMode(true);
-    fireConfetti();
-    setTimeout(() => setPartyMode(false), 3000);
-  };
 
   const getPageTitle = () => {
     switch (location.pathname) {
@@ -269,23 +159,6 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
           </div>
         </div>
 
-        <button
-          onClick={handlePartyMode}
-          disabled={partyMode}
-          className={`
-            flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm text-white
-            bg-gradient-to-r from-purple-500 via-pink-500 to-fuchsia-500
-            hover:from-purple-400 hover:via-pink-400 hover:to-fuchsia-400
-            hover:scale-105 hover:shadow-lg hover:shadow-purple-500/30
-            active:scale-95
-            transition-all duration-200 ease-out
-            disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100
-            ${partyMode ? 'animate-bounce' : ''}
-          `}
-        >
-          <PartyPopper className="h-4 w-4" />
-          <span>Party Mode</span>
-        </button>
       </div>
     </header>
   );
