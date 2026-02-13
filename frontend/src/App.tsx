@@ -119,12 +119,14 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   );
 }
 
-function useDancingBanana() {
-  const bananaRef = useRef<HTMLDivElement | null>(null);
+function usePartyMode() {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const animationRef = useRef<number>(0);
 
-  const dance = useCallback(() => {
-    if (bananaRef.current) {
-      bananaRef.current.remove();
+  const party = useCallback(() => {
+    if (containerRef.current) {
+      containerRef.current.remove();
+      cancelAnimationFrame(animationRef.current);
     }
 
     const container = document.createElement('div');
@@ -139,6 +141,15 @@ function useDancingBanana() {
       overflow: hidden;
     `;
 
+    // Canvas for confetti and fireworks
+    const canvas = document.createElement('canvas');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    canvas.style.cssText = 'position: absolute; top: 0; left: 0;';
+    container.appendChild(canvas);
+    const ctx = canvas.getContext('2d')!;
+
+    // Dancing banana
     const banana = document.createElement('img');
     banana.src = DANCING_BANANA;
     banana.style.cssText = `
@@ -149,6 +160,7 @@ function useDancingBanana() {
       left: -200px;
       animation: bananaSlide 3s ease-in-out forwards;
     `;
+    container.appendChild(banana);
 
     const style = document.createElement('style');
     style.textContent = `
@@ -158,30 +170,135 @@ function useDancingBanana() {
         100% { left: calc(100% + 200px); }
       }
     `;
-
     document.head.appendChild(style);
-    container.appendChild(banana);
     document.body.appendChild(container);
-    bananaRef.current = container;
+    containerRef.current = container;
 
-    setTimeout(() => {
-      container.remove();
-      style.remove();
-      bananaRef.current = null;
-    }, 3500);
+    // Particle system
+    const colors = ['#a855f7', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#ffffff'];
+
+    interface Particle {
+      x: number; y: number; vx: number; vy: number;
+      size: number; color: string; alpha: number; type: 'confetti' | 'firework' | 'spark';
+      rotation: number; rotationSpeed: number;
+    }
+
+    const particles: Particle[] = [];
+
+    // Initial confetti burst from top
+    for (let i = 0; i < 150; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: -20,
+        vx: (Math.random() - 0.5) * 8,
+        vy: Math.random() * 4 + 2,
+        size: Math.random() * 8 + 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: 1,
+        type: 'confetti',
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: (Math.random() - 0.5) * 0.2,
+      });
+    }
+
+    // Firework launcher
+    const launchFirework = (x: number, y: number) => {
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      for (let i = 0; i < 30; i++) {
+        const angle = (Math.PI * 2 * i) / 30;
+        const speed = Math.random() * 6 + 4;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          size: Math.random() * 4 + 2,
+          color,
+          alpha: 1,
+          type: 'spark',
+          rotation: 0,
+          rotationSpeed: 0,
+        });
+      }
+    };
+
+    // Launch fireworks at intervals
+    const fireworkTimes = [200, 600, 1000, 1400, 1800, 2200];
+    fireworkTimes.forEach(time => {
+      setTimeout(() => {
+        launchFirework(
+          Math.random() * canvas.width * 0.6 + canvas.width * 0.2,
+          Math.random() * canvas.height * 0.4 + canvas.height * 0.1
+        );
+      }, time);
+    });
+
+    const startTime = performance.now();
+    const duration = 3500;
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      if (elapsed > duration) {
+        container.remove();
+        style.remove();
+        containerRef.current = null;
+        return;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+
+        if (p.type === 'confetti') {
+          p.vy += 0.15; // gravity
+          p.vx *= 0.99;
+          p.rotation += p.rotationSpeed;
+        } else {
+          p.vy += 0.12;
+          p.alpha -= 0.02;
+        }
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.alpha <= 0 || p.y > canvas.height + 50) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+
+        if (p.type === 'confetti') {
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+          ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+        } else {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
   }, []);
 
-  return dance;
+  return party;
 }
 
 function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const location = useLocation();
-  const danceBanana = useDancingBanana();
+  const startParty = usePartyMode();
   const [partyMode, setPartyMode] = useState(false);
 
   const handlePartyMode = () => {
     setPartyMode(true);
-    danceBanana();
+    startParty();
     setTimeout(() => setPartyMode(false), 3500);
   };
 
