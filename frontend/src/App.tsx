@@ -8,7 +8,7 @@ import {
   Menu,
   X,
   ExternalLink,
-  // PartyPopper  // Uncomment for party mode
+  PartyPopper
 } from 'lucide-react';
 import { useState, useCallback, useRef } from 'react';
 import Dashboard from './components/Dashboard';
@@ -119,9 +119,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   );
 }
 
-// Party mode hook - rename to usePartyMode when enabling
-// @ts-expect-error - Intentionally unused until demo
-function _usePartyMode() {
+function usePartyMode() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const animationRef = useRef<number>(0);
 
@@ -295,10 +293,9 @@ function _usePartyMode() {
 
 function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const location = useLocation();
-  // Party mode - uncomment to enable:
-  // const startParty = usePartyMode();
-  // const [partyMode, setPartyMode] = useState(false);
-  // const handlePartyMode = () => { setPartyMode(true); startParty(); setTimeout(() => setPartyMode(false), 3500); };
+  const startParty = usePartyMode();
+  const [partyMode, setPartyMode] = useState(false);
+  const handlePartyMode = () => { setPartyMode(true); startParty(); setTimeout(() => setPartyMode(false), 3500); };
 
   const getPageTitle = () => {
     switch (location.pathname) {
@@ -341,7 +338,6 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
           </div>
         </div>
 
-        {/* Party button - uncomment to enable:
         <button
           onClick={handlePartyMode}
           disabled={partyMode}
@@ -359,7 +355,6 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <PartyPopper className="h-4 w-4" />
           <span className="hidden sm:inline">Party Mode</span>
         </button>
-        */}
       </div>
     </header>
   );
