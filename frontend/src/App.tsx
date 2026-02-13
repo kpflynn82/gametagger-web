@@ -8,7 +8,7 @@ import {
   Menu,
   X,
   ExternalLink,
-  PartyPopper
+  // PartyPopper  // Uncomment for party mode
 } from 'lucide-react';
 import { useState, useCallback, useRef } from 'react';
 import Dashboard from './components/Dashboard';
@@ -119,7 +119,9 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   );
 }
 
-function usePartyMode() {
+// Party mode hook - rename to usePartyMode when enabling
+// @ts-expect-error - Intentionally unused until demo
+function _usePartyMode() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const animationRef = useRef<number>(0);
 
