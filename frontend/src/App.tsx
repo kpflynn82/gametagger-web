@@ -7,9 +7,10 @@ import {
   BookOpen,
   Menu,
   X,
-  ExternalLink
+  ExternalLink,
+  PartyPopper
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import Dashboard from './components/Dashboard';
 import AnalyzePage from './components/AnalyzePage';
 import HistoryPage from './components/HistoryPage';
@@ -115,8 +116,71 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   );
 }
 
+function useDancingBanana() {
+  const bananaRef = useRef<HTMLDivElement | null>(null);
+
+  const dance = useCallback(() => {
+    if (bananaRef.current) {
+      bananaRef.current.remove();
+    }
+
+    const container = document.createElement('div');
+    container.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 9999;
+      overflow: hidden;
+    `;
+
+    const banana = document.createElement('img');
+    banana.src = '/dancing-banana.gif';
+    banana.style.cssText = `
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 150px;
+      left: -200px;
+      animation: bananaSlide 3s ease-in-out forwards;
+    `;
+
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes bananaSlide {
+        0% { left: -200px; }
+        50% { left: calc(50% - 75px); }
+        100% { left: calc(100% + 200px); }
+      }
+    `;
+
+    document.head.appendChild(style);
+    container.appendChild(banana);
+    document.body.appendChild(container);
+    bananaRef.current = container;
+
+    setTimeout(() => {
+      container.remove();
+      style.remove();
+      bananaRef.current = null;
+    }, 3500);
+  }, []);
+
+  return dance;
+}
+
 function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const location = useLocation();
+  const danceBanana = useDancingBanana();
+  const [partyMode, setPartyMode] = useState(false);
+
+  const handlePartyMode = () => {
+    setPartyMode(true);
+    danceBanana();
+    setTimeout(() => setPartyMode(false), 3500);
+  };
 
   const getPageTitle = () => {
     switch (location.pathname) {
@@ -159,6 +223,23 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
           </div>
         </div>
 
+        <button
+          onClick={handlePartyMode}
+          disabled={partyMode}
+          className={`
+            flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm text-white
+            bg-gradient-to-r from-purple-500 via-pink-500 to-fuchsia-500
+            hover:from-purple-400 hover:via-pink-400 hover:to-fuchsia-400
+            hover:scale-105 hover:shadow-lg hover:shadow-purple-500/30
+            active:scale-95
+            transition-all duration-200 ease-out
+            disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100
+            ${partyMode ? 'animate-bounce' : ''}
+          `}
+        >
+          <PartyPopper className="h-4 w-4" />
+          <span className="hidden sm:inline">Party Mode</span>
+        </button>
       </div>
     </header>
   );
