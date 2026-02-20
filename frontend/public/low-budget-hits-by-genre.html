@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Low-Budget Hits by Genre — Where Do They Come From?</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e0e0e0; padding: 40px 20px; line-height: 1.6; }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 28px; color: #fff; margin-bottom: 8px; }
+  .subtitle { color: #888; font-size: 14px; margin-bottom: 40px; }
+  .section { margin-bottom: 48px; }
+  .section-title { font-size: 20px; color: #fff; margin-bottom: 6px; }
+  .section-desc { color: #999; font-size: 13px; margin-bottom: 20px; }
+
+  /* Genre cards */
+  .genre-card {
+    background: #1a1d27;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-left: 4px solid transparent;
+    transition: transform 0.15s;
+  }
+  .genre-card:hover { transform: translateX(4px); }
+  .genre-card.tier-s { border-left-color: #22c55e; }
+  .genre-card.tier-a { border-left-color: #3b82f6; }
+  .genre-card.tier-b { border-left-color: #eab308; }
+  .genre-card.tier-c { border-left-color: #f97316; }
+  .genre-card.tier-f { border-left-color: #ef4444; }
+
+  .rank { font-size: 32px; font-weight: 800; width: 48px; text-align: center; flex-shrink: 0; }
+  .tier-s .rank { color: #22c55e; }
+  .tier-a .rank { color: #3b82f6; }
+  .tier-b .rank { color: #eab308; }
+  .tier-c .rank { color: #f97316; }
+  .tier-f .rank { color: #ef4444; }
+
+  .genre-info { flex: 1; }
+  .genre-name { font-size: 18px; font-weight: 700; color: #fff; }
+  .genre-meta { font-size: 13px; color: #999; margin-top: 2px; }
+  .genre-detail { font-size: 13px; color: #bbb; margin-top: 8px; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  .badge-hot { background: rgba(34,197,94,0.15); color: #22c55e; }
+  .badge-good { background: rgba(59,130,246,0.15); color: #3b82f6; }
+  .badge-ok { background: rgba(234,179,8,0.15); color: #eab308; }
+  .badge-risky { background: rgba(249,115,22,0.15); color: #f97316; }
+  .badge-avoid { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+  /* Bar chart */
+  .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .bar-label { width: 180px; text-align: right; font-size: 13px; color: #ccc; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 28px; background: #1a1d27; border-radius: 6px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 10px; font-size: 12px; font-weight: 600; color: #fff; min-width: fit-content; transition: width 0.8s ease; }
+  .bar-fill.green { background: linear-gradient(90deg, #16a34a, #22c55e); }
+  .bar-fill.blue { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+  .bar-fill.yellow { background: linear-gradient(90deg, #ca8a04, #eab308); }
+  .bar-fill.orange { background: linear-gradient(90deg, #ea580c, #f97316); }
+  .bar-fill.red { background: linear-gradient(90deg, #dc2626, #ef4444); }
+
+  /* Highlights */
+  .highlight-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .highlight-box {
+    background: #1a1d27;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .highlight-box h3 { font-size: 14px; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .highlight-box .big-num { font-size: 36px; font-weight: 800; color: #22c55e; }
+  .highlight-box .big-num.red { color: #ef4444; }
+  .highlight-box .context { font-size: 13px; color: #999; margin-top: 4px; }
+
+  /* Examples */
+  .examples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .example-tag { background: #252833; padding: 3px 10px; border-radius: 6px; font-size: 12px; color: #aaa; }
+
+  /* Key takeaway */
+  .takeaway {
+    background: linear-gradient(135deg, #1a2e1a, #1a1d27);
+    border: 1px solid #22c55e33;
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 32px;
+  }
+  .takeaway h3 { color: #22c55e; margin-bottom: 8px; }
+  .takeaway p { color: #ccc; font-size: 14px; }
+
+  .sources { margin-top: 48px; padding-top: 24px; border-top: 1px solid #252833; }
+  .sources h3 { font-size: 14px; color: #666; margin-bottom: 8px; }
+  .sources a { color: #3b82f6; font-size: 12px; text-decoration: none; display: block; margin-bottom: 4px; }
+  .sources a:hover { text-decoration: underline; }
+
+  .tier-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 32px;
+    margin-bottom: 12px;
+    padding-left: 4px;
+  }
+  .tier-label.green { color: #22c55e; }
+  .tier-label.blue { color: #3b82f6; }
+  .tier-label.yellow { color: #eab308; }
+  .tier-label.orange { color: #f97316; }
+  .tier-label.red { color: #ef4444; }
+
+  @media (max-width: 600px) {
+    .highlight-grid { grid-template-columns: 1fr; }
+    .bar-label { width: 120px; font-size: 11px; }
+    .genre-card { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h1>Low-Budget Hits by Genre</h1>
+<p class="subtitle">Where do $1M+ indie hits come from — and where do they almost never come from?<br>Based on Steam data from 2022–2025. "Hit" = 1,000+ reviews ≈ $1M+ gross revenue. "Low budget" = no major publisher, small team.</p>
+
+<!-- Key Stats -->
+<div class="highlight-grid">
+  <div class="highlight-box">
+    <h3>Indie Hit Rate</h3>
+    <div class="big-num">~0.5%</div>
+    <div class="context">Of ~18,000 indie games released in 2024, roughly 90 reached $1M+ in revenue</div>
+  </div>
+  <div class="highlight-box">
+    <h3>Best Genre: Horror</h3>
+    <div class="big-num">51</div>
+    <div class="context">Horror games reaching 1,000+ reviews in 2025 — genre has doubled since 2024</div>
+  </div>
+  <div class="highlight-box">
+    <h3>Worst Genre: 2D Platformer</h3>
+    <div class="big-num red">2</div>
+    <div class="context">Only 2 reached 1,000+ reviews in H1 2024 despite being one of the most-made genres</div>
+  </div>
+  <div class="highlight-box">
+    <h3>Revenue Concentration</h3>
+    <div class="big-num red">80%</div>
+    <div class="context">Of indie revenue comes from just 8% of the top 100 games — extreme winner-takes-all</div>
+  </div>
+</div>
+
+<!-- MOST LIKELY Section -->
+<div class="section">
+  <h2 class="section-title">Most Likely to Produce Low-Budget Hits</h2>
+  <p class="section-desc">Genres ranked by number of indie games reaching 1,000+ reviews (≈ $1M+ revenue) on Steam, 2024–2025</p>
+
+  <!-- Horizontal bar chart -->
+  <div style="margin-bottom: 32px;">
+    <div class="bar-row">
+      <div class="bar-label">Horror</div>
+      <div class="bar-track"><div class="bar-fill green" style="width: 100%;">51 hits in 2025</div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">Narrative / Visual Novel</div>
+      <div class="bar-track"><div class="bar-fill green" style="width: 92%;">51 hits (incl. FMV)</div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">Simulation</div>
+      <div class="bar-track"><div class="bar-fill green" style="width: 68%;">Strong surge 2025</div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">Co-op Multiplayer</div>
+      <div class="bar-track"><div class="bar-fill green" style="width: 60%;">21% of all 2024 hits</div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">Open World Survival Craft</div>
+      <div class="bar-track"><div class="bar-fill blue" style="width: 55%;">16 hits in H1 2024</div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">Roguelike / Deckbuilder</div>
+      <div class="bar-track"><div class="bar-fill blue" style="width: 48%;">Balatro, Hades II</div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">Idle Game</div>
+      <div class="bar-track"><div class="bar-fill blue" style="width: 40%;">8 hits in H1 2024</div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">City Builder / Tower Defense</div>
+      <div class="bar-track"><div class="bar-fill blue" style="width: 38%;">Merging genres</div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">Management / Tycoon</div>
+      <div class="bar-track"><div class="bar-fill yellow" style="width: 32%;">7 hits in H1 2024</div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">Farm Simulation</div>
+      <div class="bar-track"><div class="bar-fill yellow" style="width: 30%;">Steady performer</div></div>
+    </div>
+    <div class="bar-row" style="margin-top: 16px; border-top: 1px solid #252833; padding-top: 16px;">
+      <div class="bar-label" style="color: #ef4444;">Puzzle</div>
+      <div class="bar-track"><div class="bar-fill red" style="width: 12%;">Very few hits</div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label" style="color: #ef4444;">2D Platformer</div>
+      <div class="bar-track"><div class="bar-fill red" style="width: 8%;">~2 per half-year</div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label" style="color: #ef4444;">Match-3</div>
+      <div class="bar-track"><div class="bar-fill red" style="width: 3%;">Worst on Steam</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Detailed Cards: BEST -->
+<div class="section">
+  <h2 class="section-title">Detailed Genre Breakdown</h2>
+  <p class="section-desc">What works, what doesn't, and why — mapped to your VGMS taxonomy</p>
+
+  <div class="tier-label green">S-Tier — Best odds for low-budget hits</div>
+
+  <div class="genre-card tier-s">
+    <div class="rank">1</div>
+    <div class="genre-info">
+      <div class="genre-name">Horror</div>
+      <div class="genre-meta">VGMS: Horror | Low production cost, high audience demand</div>
+      <div class="genre-detail">The #1 genre on Steam for indie hits. Genre doubled from 2024 to 2025. Low art/asset requirements (darkness hides budget). Mixes well with co-op (biggest 2025 trend). PS1/low-poly aesthetics are actually a feature, not a limitation. Nearly half of top co-op games are horror.</div>
+      <div class="examples">
+        <span class="example-tag">Lethal Company</span>
+        <span class="example-tag">Phasmophobia</span>
+        <span class="example-tag">Content Warning</span>
+        <span class="example-tag">R.E.P.O.</span>
+        <span class="example-tag">Buckshot Roulette</span>
+      </div>
+    </div>
+    <span class="badge badge-hot">Hottest</span>
+  </div>
+
+  <div class="genre-card tier-s">
+    <div class="rank">2</div>
+    <div class="genre-info">
+      <div class="genre-name">Simulation (Job/Blue-Collar Sim)</div>
+      <div class="genre-meta">VGMS: Management Simulation | Schedule I earned $151M</div>
+      <div class="genre-detail">Huge surge in 2025. Steam players love simulating blue-collar jobs. Schedule I was the #1 indie game of 2025 at $151M. Low barrier — a single compelling loop is enough. Supermarket Simulator proved the formula.</div>
+      <div class="examples">
+        <span class="example-tag">Schedule I</span>
+        <span class="example-tag">Supermarket Simulator</span>
+        <span class="example-tag">Gas Station Simulator</span>
+        <span class="example-tag">Plate Up!</span>
+      </div>
+    </div>
+    <span class="badge badge-hot">Surging</span>
+  </div>
+
+  <div class="genre-card tier-s">
+    <div class="rank">3</div>
+    <div class="genre-info">
+      <div class="genre-name">Co-op Multiplayer (any genre)</div>
+      <div class="genre-meta">VGMS: engagement_co_op | 21% of all 2024 hits were co-op</div>
+      <div class="genre-detail">Not a genre on its own, but the strongest multiplier for success. Players must convince 3–5 friends to buy → built-in viral loop. Cheap price ($10–15) makes the ask easy. Slapstick physics + streaming-friendly = organic marketing. R.E.P.O. ($147M) and PEAK ($87M) prove this.</div>
+      <div class="examples">
+        <span class="example-tag">R.E.P.O.</span>
+        <span class="example-tag">PEAK</span>
+        <span class="example-tag">Content Warning</span>
+        <span class="example-tag">Escape from Duckov</span>
+      </div>
+    </div>
+    <span class="badge badge-hot">Viral</span>
+  </div>
+
+  <div class="tier-label blue">A-Tier — Strong odds, proven track record</div>
+
+  <div class="genre-card tier-a">
+    <div class="rank">4</div>
+    <div class="genre-info">
+      <div class="genre-name">Open World Survival Craft</div>
+      <div class="genre-meta">VGMS: Open World Survival Craft | Core Steam audience genre</div>
+      <div class="genre-detail">16 hits in H1 2024 alone. "Crafty-buildy games are what the Steam audience wants." Slightly cooled in 2025 (15 hits) but still a mainstay. High replayability = long tail revenue. Early Access model works perfectly here.</div>
+      <div class="examples">
+        <span class="example-tag">Palworld</span>
+        <span class="example-tag">V Rising</span>
+        <span class="example-tag">Valheim</span>
+        <span class="example-tag">Core Keeper</span>
+      </div>
+    </div>
+    <span class="badge badge-good">Reliable</span>
+  </div>
+
+  <div class="genre-card tier-a">
+    <div class="rank">5</div>
+    <div class="genre-info">
+      <div class="genre-name">Roguelike / Deck Builder</div>
+      <div class="genre-meta">VGMS: Roguelike, Deck Builder | Balatro won GOTY 2024</div>
+      <div class="genre-detail">Traditional roguelikes and deckbuilders still very strong. Balatro (solo dev) won multiple GOTY awards. Key: needs a unique hook. Warning — "Vampire Survivors clones" (auto-shooters) collapsed from 17 hits to 1. Innovation required.</div>
+      <div class="examples">
+        <span class="example-tag">Balatro</span>
+        <span class="example-tag">Slay the Spire 2</span>
+        <span class="example-tag">Hades II</span>
+        <span class="example-tag">Dead Cells</span>
+      </div>
+    </div>
+    <span class="badge badge-good">Proven</span>
+  </div>
+
+  <div class="genre-card tier-a">
+    <div class="rank">6</div>
+    <div class="genre-info">
+      <div class="genre-name">Narrative Adventure / Visual Novel</div>
+      <div class="genre-meta">VGMS: Narrative Adventure, Visual Novel | Rose to #1 genre in 2025</div>
+      <div class="genre-detail">Climbed from 17 hits (2022) → 20 (2023) → 30 (2024) → 51 (2025). FMV games breaking through (19 FMV hits in 2025). Strong correlation with anime art style and Chinese player growth. Even without FMV, 32 hits is still top 3.</div>
+      <div class="examples">
+        <span class="example-tag">Disco Elysium</span>
+        <span class="example-tag">Her Story</span>
+        <span class="example-tag">Doki Doki Literature Club</span>
+      </div>
+    </div>
+    <span class="badge badge-good">Rising Fast</span>
+  </div>
+
+  <div class="tier-label yellow">B-Tier — Moderate odds, need a strong hook</div>
+
+  <div class="genre-card tier-b">
+    <div class="rank">7</div>
+    <div class="genre-info">
+      <div class="genre-name">Idle Game</div>
+      <div class="genre-meta">VGMS: Idle Game | Jumped from 3 hits/year to 8 in H1 2024</div>
+      <div class="genre-detail">Booming trend but longevity uncertain. Very low production cost. The advice: "If you're years deep in an unpopular genre, take a 9-month break and make an idler." Good fallback/learning project for small teams.</div>
+    </div>
+    <span class="badge badge-ok">Trending</span>
+  </div>
+
+  <div class="genre-card tier-b">
+    <div class="rank">8</div>
+    <div class="genre-info">
+      <div class="genre-name">City Builder / Tower Defense</div>
+      <div class="genre-meta">VGMS: City Builder, Tower Defense | Genres are merging</div>
+      <div class="genre-detail">Traditional city builders declining, but tower defense picking up. The two genres are merging — games like Border Pioneer and Drill Core combine both. 5 tower defense hits already in early 2025 vs 8 in all of 2024.</div>
+    </div>
+    <span class="badge badge-ok">Evolving</span>
+  </div>
+
+  <div class="genre-card tier-b">
+    <div class="rank">9</div>
+    <div class="genre-info">
+      <div class="genre-name">Farm Simulation / Cozy Game</div>
+      <div class="genre-meta">VGMS: Farm Simulation, Cozy Game | Steady but not explosive</div>
+      <div class="genre-detail">7 hits in H1 2024. Reliable audience but market is well-served. Stardew Valley casts a long shadow. Needs differentiation. Works well for small teams with patience.</div>
+    </div>
+    <span class="badge badge-ok">Steady</span>
+  </div>
+
+  <div class="tier-label orange">C-Tier — Low odds, niche markets</div>
+
+  <div class="genre-card tier-c">
+    <div class="rank">10</div>
+    <div class="genre-info">
+      <div class="genre-name">3D Platformer</div>
+      <div class="genre-meta">VGMS: 3D Platformer | Slightly better than 2D, still risky</div>
+      <div class="genre-detail">4 hits with 1,000+ reviews in H1 2024 — some "greenshoots" but still a tough market. Requires more art/level design investment than many other genres.</div>
+    </div>
+    <span class="badge badge-risky">Risky</span>
+  </div>
+
+  <div class="genre-card tier-c">
+    <div class="rank">11</div>
+    <div class="genre-info">
+      <div class="genre-name">Indie Multiplayer Shooter</div>
+      <div class="genre-meta">VGMS: First-Person Shooter, Battle Royale | Player retention nightmare</div>
+      <div class="genre-detail">Even games that hit 1,000+ reviews die quickly. Of recent indie multiplayer shooters, only Splitgate 2 survived — and even then players complain about low population. Requires ongoing server costs and content pipeline that low-budget teams can't sustain.</div>
+    </div>
+    <span class="badge badge-risky">Dangerous</span>
+  </div>
+
+  <div class="tier-label red">F-Tier — Avoid for low-budget projects</div>
+
+  <div class="genre-card tier-f">
+    <div class="rank">12</div>
+    <div class="genre-info">
+      <div class="genre-name">2D Platformer</div>
+      <div class="genre-meta">VGMS: 2D Platformer | "Horrific sales records and abundant supply"</div>
+      <div class="genre-detail">Only 2 reached 1,000+ reviews in H1 2024. This is the genre indies make the most despite having the worst hit rate. Massively oversaturated — thousands released yearly. The few successes (Celeste, Hollow Knight) are exceptional outliers, not the norm.</div>
+    </div>
+    <span class="badge badge-avoid">Avoid</span>
+  </div>
+
+  <div class="genre-card tier-f">
+    <div class="rank">13</div>
+    <div class="genre-info">
+      <div class="genre-name">Puzzle (Pure)</div>
+      <div class="genre-meta">VGMS: Puzzle | Near-bottom performer consistently</div>
+      <div class="genre-detail">Pure puzzle games almost never break through. Exception: hybrid genres work — Blue Prince (2025) combined puzzle-adventure with roguelite elements and succeeded. If you make a puzzle game, it needs to be mixed with something else.</div>
+    </div>
+    <span class="badge badge-avoid">Hybrid only</span>
+  </div>
+
+  <div class="genre-card tier-f">
+    <div class="rank">14</div>
+    <div class="genre-info">
+      <div class="genre-name">Match-3</div>
+      <div class="genre-meta">VGMS: Match-3 | Consistently the absolute worst genre on Steam</div>
+      <div class="genre-detail">"The worst genre you can make" for Steam according to How To Market A Game's multi-year data. Match-3 dominates mobile but has virtually zero audience on PC/Steam. Don't bring a mobile genre to a PC platform.</div>
+    </div>
+    <span class="badge badge-avoid">Worst</span>
+  </div>
+
+  <div class="genre-card tier-f">
+    <div class="rank">15</div>
+    <div class="genre-info">
+      <div class="genre-name">Auto-Shooter / Vampire Survivors Clone</div>
+      <div class="genre-meta">VGMS: Roguelike (bullet heaven sub-genre) | Collapsed in 2024</div>
+      <div class="genre-detail">Went from 17 hits in 2023 to just 1 in H1 2024. The trend is fully dead. Vampire Survivors itself was a once-in-a-generation hit; the clones have been completely rejected by the market.</div>
+    </div>
+    <span class="badge badge-avoid">Dead Trend</span>
+  </div>
+</div>
+
+<!-- Key Takeaway -->
+<div class="takeaway">
+  <h3>The Key Insight</h3>
+  <p>The single biggest factor for a low-budget hit isn't just genre — it's <strong>genre + multiplier</strong>. The winning formula in 2024–2025 is: pick a high-hit-rate genre (horror, sim, survival craft) and add co-op multiplayer. Co-op creates a viral purchase loop (every player needs their own copy) and generates streaming/social media content organically. Horror + co-op alone accounts for a disproportionate share of indie megahits.</p>
+  <p style="margin-top: 12px;">Low-poly and retro visuals (PS1 aesthetic, pixel art in non-platformer contexts) are actually <em>advantages</em> — they reduce production costs while being seen as stylistic choices rather than budget limitations.</p>
+  <p style="margin-top: 12px;">Also notable: <strong>experience compounds.</strong> A developer's second game sells 40% better on average, and their third sells 24% better than that. The studios behind Palworld, Lethal Company, and V Rising had all shipped games before.</p>
+</div>
+
+<!-- Sources -->
+<div class="sources">
+  <h3>Sources</h3>
+  <a href="https://howtomarketagame.com/2026/01/27/what-the-hell-happened-in-2025/">How To Market A Game — What the Hell Happened in 2025?</a>
+  <a href="https://howtomarketagame.com/2024/07/16/what-games-are-selling-q2-2024/">How To Market A Game — What Games Are Selling: Q2 2024</a>
+  <a href="https://opgamemarketing.substack.com/p/the-2024-indie-and-aa-game-market">OP Game Marketing — The 2024 Indie & AA Games Market</a>
+  <a href="https://gameworldobserver.com/2024/07/18/top-game-genres-on-steam-first-half-2024-key-trends">Game World Observer — Top Game Genres on Steam, H1 2024</a>
+  <a href="https://gameworldobserver.com/2024/10/16/indie-games-revenue-steam-vs-aaa-titles-vg-insights">Game World Observer — Indie Games Revenue vs AAA on Steam</a>
+  <a href="https://shahriyarshahrabi.medium.com/the-2024-indie-game-landscape-why-luck-plays-a-major-role-in-success-on-steam-c6cbc1868c35">Shahriar Shahrabi — The 2024 Indie Game Landscape</a>
+  <a href="https://gameworldobserver.com/2025/12/22/indie-projects-generated-a-quarter-of-the-total-game-revenue-on-steam-by-the-end-of-2025-analytics">Game World Observer — Indie Revenue 25% of Steam in 2025</a>
+  <a href="https://vginsights.com/insights/article/infographic-indie-game-revenues-on-steam">VG Insights — Indie Game Revenues on Steam</a>
+  <a href="https://www.gamedeveloper.com/game-platforms/what-can-we-learn-from-the-1-600-highest-earning-indie-developers-on-steam-">Game Developer — 1,600 Highest Earning Indie Developers</a>
+  <a href="https://steamdb.info/stats/releases/?tagid=492">SteamDB — Indie Game Release Stats</a>
+</div>
+
+</div>
+
+</body>
+</html>
