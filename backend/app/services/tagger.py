@@ -903,10 +903,10 @@ class AsyncGameTagger:
         # Standard uses Haiku for cost efficiency (~60x cheaper than Sonnet)
         # Deep uses Opus for highest accuracy
         if quality == "deep":
-            model = "claude-opus-4-20250514"
+            model = "claude-opus-4-8"
             max_tokens = 4000
         else:
-            model = "claude-3-5-haiku-20241022"
+            model = "claude-haiku-4-5-20251001"
             max_tokens = 2000
 
         for src in sources:
