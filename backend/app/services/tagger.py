@@ -1140,6 +1140,10 @@ class AsyncGameTagger:
             result['analysis_notes'] = (result.get('analysis_notes', '') +
                 ' [Warning: No tags extracted, confidence downgraded to low]').strip()
 
+        # Ensure confidence is always a valid value so the badge never shows blank
+        if result.get('confidence') not in ('high', 'medium', 'low'):
+            result['confidence'] = 'medium' if tag_count > 0 else 'low'
+
         # Validate primary_genre against allowed list
         current_genre = result.get('primary_genre', '')
         if current_genre and current_genre not in PRIMARY_GENRES_LIST:
