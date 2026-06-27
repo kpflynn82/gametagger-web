@@ -24,6 +24,137 @@ except ImportError:
     HAS_YTDLP = False
 
 
+# ---------------------------------------------------------------------------
+# Trailer frame sampling
+# ---------------------------------------------------------------------------
+# Samples still frames from an official store trailer (Steam mp4 or Xbox HLS)
+# so the model can "watch" the trailer the way it analyzes screenshots. This is
+# the robust replacement for the old YouTube/yt-dlp path (slow, fragile, and
+# disabled in production).
+#
+# SAFETY: gated behind the ENABLE_TRAILER_FRAMES env var (default OFF). When
+# off, every helper returns [] immediately and tagging behaves exactly as
+# before (store screenshots only). Any error also returns [], so a trailer
+# problem can never break a tagging run.
+
+def _trailer_frames_enabled() -> bool:
+    return os.environ.get("ENABLE_TRAILER_FRAMES", "").lower() in ("1", "true", "yes", "on")
+
+
+def _sample_frames_from_video_sync(source: str, every_seconds: int = 5,
+                                   max_frames: int = 8, max_width: int = 800) -> list:
+    """Open a video (local file path or network URL) and grab one frame every
+    `every_seconds`, up to `max_frames`. Returns base64 JPEG strings.
+    Runs synchronously (call via run_in_executor). Never raises."""
+    if not HAS_OPENCV:
+        return []
+    frames = []
+    cap = None
+    try:
+        cap = cv2.VideoCapture(source)
+        if not cap or not cap.isOpened():
+            return []
+        fps = cap.get(cv2.CAP_PROP_FPS) or 0
+        total = cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0
+        duration = (total / fps) if (fps and total) else 0
+
+        if duration and duration > 0:
+            timestamps, t = [], every_seconds
+            while t < duration and len(timestamps) < max_frames:
+                timestamps.append(t)
+                t += every_seconds
+            if not timestamps:  # very short clip: grab the middle
+                timestamps = [duration / 2]
+        else:
+            # Unknown duration (common for HLS streams): step forward by time.
+            timestamps = [every_seconds * (i + 1) for i in range(max_frames)]
+
+        for ts in timestamps:
+            cap.set(cv2.CAP_PROP_POS_MSEC, ts * 1000)
+            ok, frame = cap.read()
+            if not ok or frame is None:
+                continue
+            h, w = frame.shape[:2]
+            if w > max_width:
+                scale = max_width / w
+                frame = cv2.resize(frame, (max_width, int(h * scale)))
+            ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            if ok2:
+                frames.append(base64.b64encode(buf).decode("utf-8"))
+    except Exception:
+        return frames
+    finally:
+        try:
+            if cap is not None:
+                cap.release()
+        except Exception:
+            pass
+    return frames
+
+
+async def _download_to_temp(url: str, max_bytes: int = 80 * 1024 * 1024) -> Optional[str]:
+    """Stream a (capped) file to a temp path. Returns the path or None."""
+    path = None
+    try:
+        fd, path = tempfile.mkstemp(suffix=".mp4")
+        os.close(fd)
+        written = 0
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+            async with client.stream("GET", url) as resp:
+                if resp.status_code != 200:
+                    os.remove(path)
+                    return None
+                with open(path, "wb") as f:
+                    async for chunk in resp.aiter_bytes():
+                        written += len(chunk)
+                        if written > max_bytes:
+                            break
+                        f.write(chunk)
+        if written > 0:
+            return path
+        os.remove(path)
+    except Exception:
+        if path and os.path.exists(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+    return None
+
+
+async def _get_trailer_frames(url: str, *, is_mp4: bool,
+                              every_seconds: int = 5, max_frames: int = 8) -> list:
+    """Fetch trailer frames from a store trailer URL. mp4 (Steam) is downloaded
+    first; HLS/DASH (Xbox) is read directly. Returns [] on anything unexpected."""
+    if not _trailer_frames_enabled() or not HAS_OPENCV or not url:
+        return []
+    loop = asyncio.get_event_loop()
+    tmp_path = None
+    try:
+        target = url
+        if is_mp4:
+            tmp_path = await _download_to_temp(url)
+            if not tmp_path:
+                return []
+            target = tmp_path
+        frames = await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                lambda: _sample_frames_from_video_sync(target, every_seconds, max_frames)
+            ),
+            timeout=90
+        )
+        return frames or []
+    except Exception:
+        return []
+    finally:
+        if tmp_path:
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass
+
+
 # VGMS Schema
 VGMS_CATEGORIES = {
     'gameplay': [
@@ -213,7 +344,8 @@ class AsyncSteamSource:
                 pass
         return None
 
-    async def fetch(self, game_name: str, progress_callback: Callable = None) -> dict:
+    async def fetch(self, game_name: str, progress_callback: Callable = None,
+                    fetch_trailer: bool = False) -> dict:
         """Fetch Steam Store data."""
         if progress_callback:
             await progress_callback('steam', 'searching')
@@ -241,6 +373,22 @@ class AsyncSteamSource:
         genres = [g['description'] for g in details.get('genres', [])]
         categories = [c['description'] for c in details.get('categories', [])]
 
+        # Sample frames from the official Steam trailer (deep mode only).
+        trailer_frames = []
+        trailer_url = None
+        if fetch_trailer and _trailer_frames_enabled():
+            try:
+                movies = details.get('movies') or []
+                if movies:
+                    mp4 = movies[0].get('mp4') or {}
+                    trailer_url = mp4.get('480') or mp4.get('max')
+                    if trailer_url:
+                        if progress_callback:
+                            await progress_callback('steam', 'reading trailer')
+                        trailer_frames = await _get_trailer_frames(trailer_url, is_mp4=True)
+            except Exception:
+                trailer_frames = []
+
         if progress_callback:
             await progress_callback('steam', 'completed')
 
@@ -253,6 +401,8 @@ class AsyncSteamSource:
             'genres': genres,
             'categories': categories,
             'screenshots': screenshots,
+            'trailer_frames': trailer_frames,
+            'trailer_url': trailer_url,
             'app_id': app_id,
             'store_url': f"https://store.steampowered.com/app/{app_id}"
         }
@@ -387,7 +537,8 @@ class AsyncXboxSource:
                 pass
         return None
 
-    async def fetch(self, game_name: str, progress_callback: Callable = None) -> dict:
+    async def fetch(self, game_name: str, progress_callback: Callable = None,
+                    fetch_trailer: bool = False) -> dict:
         """Fetch Xbox Store data."""
         if progress_callback:
             await progress_callback('xbox', 'searching')
@@ -418,6 +569,31 @@ class AsyncXboxSource:
                     if len(screenshots) >= 4:
                         break
 
+        # Sample frames from the official Xbox trailer (HLS/DASH; deep mode only).
+        trailer_frames = []
+        trailer_url = None
+        if fetch_trailer and _trailer_frames_enabled():
+            try:
+                cms_videos = localized.get('CMSVideos') or []
+                pick = None
+                for purpose in ('trailer', 'herotrailer'):
+                    for v in cms_videos:
+                        if (v.get('VideoPurpose') or '').lower() == purpose:
+                            pick = v
+                            break
+                    if pick:
+                        break
+                if not pick and cms_videos:
+                    pick = cms_videos[0]
+                if pick:
+                    trailer_url = pick.get('HLS') or pick.get('DASH')
+                    if trailer_url:
+                        if progress_callback:
+                            await progress_callback('xbox', 'reading trailer')
+                        trailer_frames = await _get_trailer_frames(trailer_url, is_mp4=False)
+            except Exception:
+                trailer_frames = []
+
         if progress_callback:
             await progress_callback('xbox', 'completed')
 
@@ -429,6 +605,8 @@ class AsyncXboxSource:
             'publisher': localized.get('PublisherName', ''),
             'categories': properties.get('Categories', []),
             'screenshots': screenshots,
+            'trailer_frames': trailer_frames,
+            'trailer_url': trailer_url,
             'product_id': product_id,
             'store_url': f"https://www.xbox.com/en-US/games/store/game/{product_id}"
         }
@@ -926,7 +1104,16 @@ class AsyncGameTagger:
                 context_parts.append(f"  Title: {src.get('title', 'Unknown')}")
                 context_parts.append(f"  Categories: {', '.join(src.get('categories') or [])}")
                 context_parts.append(f"  Description: {(src.get('description') or '')[:1000]}")
-                for ss in src.get('screenshots', [])[:2]:
+                xbox_trailer = src.get('trailer_frames') or []
+                if xbox_trailer:
+                    context_parts.append("  (Images below include frames sampled from the official Xbox trailer; "
+                                         "trailers are edited and can include cinematic/cutscene shots — weight actual gameplay.)")
+                for frame in xbox_trailer[:4]:
+                    content.append({
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": "image/jpeg", "data": frame}
+                    })
+                for ss in src.get('screenshots', [])[:(1 if xbox_trailer else 2)]:
                     content.append({
                         "type": "image",
                         "source": {"type": "base64", "media_type": "image/jpeg", "data": ss['data']}
@@ -938,7 +1125,16 @@ class AsyncGameTagger:
                 context_parts.append(f"  Genres: {', '.join(src.get('genres') or [])}")
                 context_parts.append(f"  Categories: {', '.join(src.get('categories') or [])}")
                 context_parts.append(f"  Description: {(src.get('description') or '')[:1000]}")
-                for ss in src.get('screenshots', [])[:2]:
+                steam_trailer = src.get('trailer_frames') or []
+                if steam_trailer:
+                    context_parts.append("  (Images below include frames sampled from the official Steam trailer; "
+                                         "trailers are edited and can include cinematic/cutscene shots — weight actual gameplay.)")
+                for frame in steam_trailer[:4]:
+                    content.append({
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": "image/jpeg", "data": frame}
+                    })
+                for ss in src.get('screenshots', [])[:(1 if steam_trailer else 2)]:
                     content.append({
                         "type": "image",
                         "source": {"type": "base64", "media_type": "image/jpeg", "data": ss}
@@ -1048,15 +1244,20 @@ class AsyncGameTagger:
         # Fetch Steam, Xbox, and Wikipedia concurrently with timeout (they're fast)
         tasks = []
 
+        # Trailer-frame analysis is a deep-mode extra (and must be enabled by the
+        # ENABLE_TRAILER_FRAMES env flag). Standard mode stays fast: store pages only.
+        do_trailer = (quality == "deep") and _trailer_frames_enabled()
+        src_timeout = 160 if do_trailer else 30  # trailers need time to download + sample
+
         if 'steam' in sources:
             tasks.append(asyncio.wait_for(
-                self.steam.fetch(game_name, progress_callback),
-                timeout=30
+                self.steam.fetch(game_name, progress_callback, fetch_trailer=do_trailer),
+                timeout=src_timeout
             ))
         if 'xbox' in sources:
             tasks.append(asyncio.wait_for(
-                self.xbox.fetch(game_name, progress_callback),
-                timeout=30
+                self.xbox.fetch(game_name, progress_callback, fetch_trailer=do_trailer),
+                timeout=src_timeout
             ))
         if 'wikipedia' in sources:
             tasks.append(asyncio.wait_for(
@@ -1115,7 +1316,7 @@ class AsyncGameTagger:
 
         # Include source data for reference
         result['source_data'] = {
-            s['source']: {k: v for k, v in s.items() if k not in ['screenshots', 'frames']}
+            s['source']: {k: v for k, v in s.items() if k not in ['screenshots', 'frames', 'trailer_frames']}
             for s in successful
         }
 
