@@ -9,7 +9,7 @@ import {
   Database,
   Cpu,
   Globe,
-  Youtube,
+  Film,
   ArrowRight,
   CheckCircle2,
   Sparkles,
@@ -179,11 +179,11 @@ export default function AboutPage() {
 
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Youtube className="h-4 w-4 text-purple-400" />
+              <Film className="h-4 w-4 text-purple-400" />
             </div>
             <div>
               <h4 className="text-white font-medium text-sm mb-1">Video Frame Analysis</h4>
-              <p className="text-xs text-dark-300">Each video yields 30+ frames for comprehensive verification</p>
+              <p className="text-xs text-dark-300">Each trailer yields multiple frames sampled across the clip for verification</p>
             </div>
           </div>
 
@@ -433,7 +433,7 @@ export default function AboutPage() {
                 <h3 className="text-lg font-semibold text-white mb-2">Automatic Escalation</h3>
                 <p className="text-dark-200 text-sm">
                   When confidence is low, the system automatically escalates to additional sources.
-                  YouTube video analysis provides visual verification by actually watching gameplay footage.
+                  Gameplay trailer analysis provides visual verification by sampling frames from the official trailer.
                 </p>
               </div>
             </div>
@@ -442,12 +442,12 @@ export default function AboutPage() {
           <div className="glass-card p-6">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Youtube className="h-6 w-6 text-red-400" />
+                <Film className="h-6 w-6 text-red-400" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-white mb-2">Vision AI Verification</h3>
                 <p className="text-dark-200 text-sm">
-                  Deep Analysis mode extracts frames from YouTube gameplay videos and uses
+                  Deep Analysis samples frames from the official gameplay trailer and uses
                   Claude's vision capabilities to verify classifications by seeing the game in action.
                 </p>
               </div>

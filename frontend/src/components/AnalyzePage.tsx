@@ -43,10 +43,10 @@ const SOURCE_CONFIG = [
   },
   {
     id: 'youtube',
-    label: 'YouTube Video',
-    description: 'Gameplay video analysis',
-    time: '30-90s',
-    icon: '📺',
+    label: 'Gameplay Trailer',
+    description: 'Official trailer frame analysis',
+    time: '10-30s',
+    icon: '🎬',
     color: 'source-youtube',
   },
 ];
@@ -722,7 +722,7 @@ export default function AnalyzePage() {
                 })}
               </div>
               <p className="text-xs text-dark-400 mt-3">
-                YouTube provides the most detailed visual analysis but takes longer to process.
+                Trailer analysis provides the most detailed visual signal but takes a little longer to process.
               </p>
             </div>
 
@@ -781,14 +781,14 @@ export default function AnalyzePage() {
               <ProgressStep label="Wikipedia" status={progress.wikipedia || 'pending'} />
             )}
             {sources.includes('youtube') && (
-              <ProgressStep label="YouTube Video" status={progress.youtube || 'pending'} />
+              <ProgressStep label="Gameplay Trailer" status={progress.youtube || 'pending'} />
             )}
             <ProgressStep label="AI Classification" status={progress.analysis || 'pending'} />
           </div>
 
           <div className="mt-8 p-4 bg-dark-700/50 rounded-xl border border-dark-600 text-center">
             <p className="text-sm text-dark-300">
-              This may take up to 2 minutes if YouTube analysis is enabled.
+              This may take up to 2 minutes if trailer analysis is enabled.
             </p>
           </div>
         </div>
