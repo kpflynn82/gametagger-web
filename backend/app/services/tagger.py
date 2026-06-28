@@ -273,6 +273,7 @@ Based on all available information, return a JSON object with:
    - detected_game: The game name you identified
    - confidence: "high", "medium", or "low"
    - primary_genre: MUST be one of these exact values: {genres}
+   - secondary_genres: A list of up to 2 OTHER genres from that exact same list that also strongly apply (most relevant first). Do NOT repeat the primary genre. Use [] if the game is essentially a single genre.
    - analysis_notes: Brief notes about classification reasoning
 
 Return ONLY valid JSON, no other text.
@@ -1383,5 +1384,17 @@ class AsyncGameTagger:
                     result['primary_genre'] = 'Arcade Racing'
                 else:
                     result['primary_genre'] = 'Action Adventure'  # Safe default
+
+        # Validate secondary_genres: keep only allowed values, drop the primary, cap to top 2
+        raw_secondary = result.get('secondary_genres')
+        cleaned_secondary = []
+        if isinstance(raw_secondary, list):
+            primary = result.get('primary_genre', '')
+            for g in raw_secondary:
+                if isinstance(g, str) and g in PRIMARY_GENRES_LIST and g != primary and g not in cleaned_secondary:
+                    cleaned_secondary.append(g)
+                if len(cleaned_secondary) >= 2:
+                    break
+        result['secondary_genres'] = cleaned_secondary
 
         return result
