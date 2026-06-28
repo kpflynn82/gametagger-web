@@ -1141,7 +1141,7 @@ export default function Dashboard() {
           title="Taxonomy Depth"
           value="200+"
           icon={Layers}
-          subtitle="tags across 44 genres"
+          subtitle="tags across 59 genres"
         />
         <StatCard
           title="Processing Speed"

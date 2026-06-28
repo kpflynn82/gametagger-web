@@ -68,7 +68,7 @@ export default function AboutPage() {
           { label: 'Cost Per Game', value: '$0.12', subtext: 'vs $15-25 manual', icon: Zap },
           { label: 'Classification Time', value: '<5 sec', subtext: 'vs 30-60 minutes', icon: Clock },
           { label: 'Games Classified', value: stats?.total_analyses?.toLocaleString() || '900+', subtext: 'and growing', icon: Database },
-          { label: 'Tag Categories', value: '200+', subtext: 'across 44 genres', icon: Layers },
+          { label: 'Tag Categories', value: '200+', subtext: 'across 59 genres', icon: Layers },
         ].map((metric, i) => (
           <div key={i} className="glass-card p-6 text-center group hover:border-xbox-green/50 transition-all duration-300">
             <div className="inline-flex p-3 bg-xbox-green/10 rounded-xl mb-4 group-hover:bg-xbox-green/20 transition-colors">
