@@ -42,6 +42,7 @@ export interface GameAnalysis {
   detected_game?: string;
   confidence?: string;
   primary_genre?: string;
+  secondary_genres?: string[];
   analysis_notes?: string;
   sources_used?: string[];
   source_urls?: Record<string, string>;  // URLs for each source (steam, xbox, wikipedia, youtube)
