@@ -348,6 +348,19 @@ function ResultView({
               {result.detected_game || result.game_name}
             </h2>
             <p className="text-lg text-dark-200 mt-1">{result.primary_genre}</p>
+            {Array.isArray(result.secondary_genres) && result.secondary_genres.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <span className="text-xs text-dark-400 uppercase tracking-wide">Also</span>
+                {result.secondary_genres.slice(0, 2).map((genre) => (
+                  <span
+                    key={genre}
+                    className="px-2.5 py-1 rounded-lg text-sm font-medium bg-dark-600/60 text-dark-100 border border-dark-500"
+                  >
+                    {genre}
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-2 mt-4">
               <span className={`confidence-${result.confidence} px-3 py-1.5 rounded-lg text-sm font-medium`}>
                 {result.confidence} confidence
