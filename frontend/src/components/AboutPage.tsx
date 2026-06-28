@@ -215,7 +215,7 @@ export default function AboutPage() {
             </div>
             <h3 className="text-xl font-semibold text-white mb-3">40,000 Hours of Training</h3>
             <p className="text-dark-200 text-sm leading-relaxed">
-              Trained on comprehensive gameplay data from Nitrogen, one of the largest
+              Trained on comprehensive gameplay data from one of the largest
               video game analytics datasets. This gives us deep understanding of how
               games play, not just how they're described.
             </p>

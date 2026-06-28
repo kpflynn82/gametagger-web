@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Search, Loader2, CheckCircle, XCircle, Clock, Save, Gamepad2, Info, Zap, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Search, Loader2, CheckCircle, XCircle, Clock, Save, Gamepad2, Info, AlertTriangle, ChevronDown } from 'lucide-react';
 import { startTagging, saveJobResult, suggestGames, type JobCreatedResponse, type GameAnalysis, type GameCandidate, type SuggestResponse } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 
@@ -214,7 +214,6 @@ function ResultView({
 
   // Group tags by category
   const groupedTags: Record<string, string[]> = {};
-  const nitrogenTags: Record<string, string[]> = { engagement: [], monetization: [], protagonist: [] };
 
   // Check if detected game differs from original query
   const detectedGame = result.detected_game || result.game_name;
@@ -255,20 +254,6 @@ function ResultView({
   Object.entries(result).forEach(([key, value]) => {
     if (typeof value !== 'boolean' || !value) return;
 
-    // Check for nitrogen tags first
-    if (key.startsWith('engagement_')) {
-      nitrogenTags.engagement.push(key);
-      return;
-    }
-    if (key.startsWith('monetization_')) {
-      nitrogenTags.monetization.push(key);
-      return;
-    }
-    if (key.startsWith('protagonist_')) {
-      nitrogenTags.protagonist.push(key);
-      return;
-    }
-
     for (const category of Object.keys(TAG_CATEGORIES)) {
       if (key.startsWith(`${category}_`) || (category === 'features' && ['multiplayer', 'open_world', 'procedural', 'story_driven'].includes(key))) {
         if (!groupedTags[category]) groupedTags[category] = [];
@@ -277,8 +262,6 @@ function ResultView({
       }
     }
   });
-
-  const hasNitrogenTags = nitrogenTags.engagement.length > 0 || nitrogenTags.monetization.length > 0 || nitrogenTags.protagonist.length > 0;
 
   return (
     <div className="space-y-6 animate-in">
@@ -425,7 +408,6 @@ function ResultView({
         <h3 className="text-lg font-semibold text-white mb-6">VGMS Classification Tags</h3>
         <div className="space-y-5">
           {Object.entries(TAG_CATEGORIES)
-            .filter(([category]) => !['engagement', 'monetization', 'protagonist'].includes(category))
             .map(([category, config]) => {
               const tags = groupedTags[category] || [];
               if (tags.length === 0) return null;
@@ -443,48 +425,6 @@ function ResultView({
             })}
         </div>
       </div>
-
-      {/* Nitrogen Tags */}
-      {hasNitrogenTags && (
-        <div className="glass-card p-6 border-l-4 border-amber-500">
-          <div className="flex items-center gap-3 mb-6">
-            <Zap className="h-5 w-5 text-amber-400" />
-            <h3 className="text-lg font-semibold text-white">Nitrogen Tags</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {nitrogenTags.engagement.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-amber-300 mb-3 uppercase tracking-wide">Engagement</p>
-                <div className="flex flex-wrap gap-2">
-                  {nitrogenTags.engagement.map((tag) => (
-                    <TagBadge key={tag} tag={tag} category="engagement" />
-                  ))}
-                </div>
-              </div>
-            )}
-            {nitrogenTags.monetization.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-emerald-300 mb-3 uppercase tracking-wide">Monetization</p>
-                <div className="flex flex-wrap gap-2">
-                  {nitrogenTags.monetization.map((tag) => (
-                    <TagBadge key={tag} tag={tag} category="monetization" />
-                  ))}
-                </div>
-              </div>
-            )}
-            {nitrogenTags.protagonist.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-pink-300 mb-3 uppercase tracking-wide">Protagonist</p>
-                <div className="flex flex-wrap gap-2">
-                  {nitrogenTags.protagonist.map((tag) => (
-                    <TagBadge key={tag} tag={tag} category="protagonist" />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

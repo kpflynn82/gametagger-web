@@ -1448,20 +1448,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Shopper Intelligence Section */}
+      {/* Engagement / Monetization / Protagonist tag distributions */}
       {(engagementTags.length > 0 || monetizationTags.length > 0 || protagonistTags.length > 0) && (
-        <>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20">
-              <Zap className="h-5 w-5 text-amber-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">Shopper Intelligence</h2>
-              <p className="text-sm text-dark-300">Player engagement and purchase decision insights</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Engagement Tags */}
             <div className="glass-card p-6">
               <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
@@ -1528,7 +1517,6 @@ export default function Dashboard() {
               )}
             </div>
           </div>
-        </>
       )}
       </section>
 
