@@ -47,8 +47,9 @@ export default function AboutPage() {
             <span className="gradient-text"> under 5 seconds</span>
           </h1>
           <p className="text-lg text-dark-200 max-w-2xl mx-auto mb-6">
-            Machine learning trained on 40,000 hours of gameplay data, combining
-            text analysis with visual recognition to classify games across 200+ tags.
+            Combining live store data with Claude's vision and language models to
+            classify games across 200+ tags—from screenshots, trailers, and store
+            listings, with no manual tagging required.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link to="/add" className="btn-secondary inline-flex items-center gap-2 text-sm">
@@ -213,11 +214,11 @@ export default function AboutPage() {
             <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-6">
               <Database className="h-6 w-6 text-purple-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-3">40,000 Hours of Training</h3>
+            <h3 className="text-xl font-semibold text-white mb-3">Grounded in Real Sources</h3>
             <p className="text-dark-200 text-sm leading-relaxed">
-              Trained on comprehensive gameplay data from one of the largest
-              video game analytics datasets. This gives us deep understanding of how
-              games play, not just how they're described.
+              Every classification is built from live data—Steam, the Xbox Store,
+              Wikipedia, and official trailers—so tags reflect verifiable information
+              about each game, not guesswork.
             </p>
           </div>
 
@@ -320,9 +321,31 @@ export default function AboutPage() {
           <div className="mt-8 pt-6 border-t border-dark-600">
             <div className="flex items-center justify-center gap-3">
               <Clock className="h-5 w-5 text-xbox-green" />
-              <span className="text-xbox-green font-semibold">Total Time: Under 5 Seconds</span>
+              <span className="text-xbox-green font-semibold">Standard run: under 5 seconds</span>
             </div>
           </div>
+        </div>
+
+        {/* Detailed pipeline steps */}
+        <div className="mt-8 grid md:grid-cols-2 gap-4">
+          {[
+            { n: '1', title: 'Identify the exact game', body: 'A disambiguation search confirms which title you mean—handling sequels, remakes, and same-name games—before any analysis runs.' },
+            { n: '2', title: 'Gather the evidence', body: 'Steam, the Xbox Store, and Wikipedia are queried in parallel for descriptions, official genres, store categories, and real screenshots.' },
+            { n: '3', title: 'Analyze the visuals', body: 'Screenshots—and, in Deep analysis, frames sampled every few seconds from the official trailer—go to Claude\u2019s vision model, so art style, UI, and gameplay are judged from what the game actually shows.' },
+            { n: '4', title: 'Map to a controlled vocabulary', body: 'Tags are assigned only from the VGMS taxonomy, with one primary genre chosen from a fixed list, and every result is validated against the allowed values to stay consistent.' },
+            { n: '5', title: 'Score and flag', body: 'Each classification gets a confidence level. Ambiguous or low-confidence games can be escalated to Deep analysis—Claude Opus plus trailer frames—for a closer look.' },
+            { n: '6', title: 'Review and correct', body: 'Anything can be reviewed and corrected by hand, keeping the saved catalog clean and trustworthy.' },
+          ].map((step) => (
+            <div key={step.n} className="glass-card p-5 flex gap-4">
+              <div className="w-8 h-8 flex-shrink-0 rounded-lg bg-xbox-green/20 text-xbox-green font-bold flex items-center justify-center">
+                {step.n}
+              </div>
+              <div>
+                <h4 className="font-semibold text-white mb-1">{step.title}</h4>
+                <p className="text-sm text-dark-300 leading-relaxed">{step.body}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -412,8 +435,9 @@ export default function AboutPage() {
               <div>
                 <h3 className="text-lg font-semibold text-white mb-2">Confidence Scoring</h3>
                 <p className="text-dark-200 text-sm mb-4">
-                  Every classification includes a confidence score based on source agreement.
-                  High confidence means multiple independent sources confirm the classification.
+                  Every classification includes a confidence level reflecting how strongly the
+                  available evidence—store data, descriptions, and images—supports the result,
+                  so you know which tags to trust and which to double-check.
                 </p>
                 <div className="flex gap-2">
                   <span className="px-3 py-1 bg-xbox-green/20 text-xbox-green text-xs rounded-full font-medium">High</span>
@@ -430,10 +454,10 @@ export default function AboutPage() {
                 <TrendingUp className="h-6 w-6 text-purple-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white mb-2">Automatic Escalation</h3>
+                <h3 className="text-lg font-semibold text-white mb-2">On-Demand Deep Analysis</h3>
                 <p className="text-dark-200 text-sm">
-                  When confidence is low, the system automatically escalates to additional sources.
-                  Gameplay trailer analysis provides visual verification by sampling frames from the official trailer.
+                  Any classification can be escalated to a deeper pass that samples frames from the
+                  official trailer, giving the model visual confirmation by seeing the game in motion.
                 </p>
               </div>
             </div>
@@ -477,22 +501,23 @@ export default function AboutPage() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 rounded-full text-blue-300 text-sm font-medium mb-4">
               <RefreshCw className="h-4 w-4" />
-              Self-Improving System
+              Human-in-the-Loop
             </div>
             <h2 className="text-2xl font-bold text-white mb-4">
-              Gets Smarter With Every Classification
+              Reviewed, Corrected, and Trustworthy
             </h2>
             <p className="text-dark-200 mb-6 leading-relaxed">
-              Every game classified expands our understanding. The system learns patterns,
-              refines accuracy, and adapts to emerging genres automatically.
+              Classifications aren't a black box. Low-confidence results are flagged, every tag
+              can be reviewed and corrected, and those corrections build a cleaner, more reliable
+              catalog over time.
             </p>
 
             <ul className="space-y-3">
               {[
-                'Each classification adds to training context',
-                'New genre patterns detected automatically',
-                'Confidence improves with more data points',
-                'Edge cases inform future classifications'
+                'Low-confidence results are flagged for review',
+                'Any classification can be corrected by hand',
+                'Corrections are saved back to the catalog',
+                'Tricky games can be re-run with Deep analysis'
               ].map((item, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <CheckCircle2 className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
@@ -506,28 +531,22 @@ export default function AboutPage() {
           <div className="relative">
             <div className="glass-card p-6 border-blue-500/20">
               <div className="flex items-center justify-between mb-6">
-                <span className="text-white font-medium">Classification Accuracy</span>
-                <span className="text-blue-400 text-sm">Improving</span>
+                <span className="text-white font-medium">Review Workflow</span>
+                <span className="text-blue-400 text-sm">Every result</span>
               </div>
 
-              {/* Progress bars showing improvement */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {[
-                  { label: 'Genre Detection', value: 94, trend: '+2.3%' },
-                  { label: 'Art Style Recognition', value: 89, trend: '+4.1%' },
-                  { label: 'Mechanic Identification', value: 91, trend: '+1.8%' },
-                  { label: 'Theme Classification', value: 87, trend: '+3.2%' },
-                ].map((metric, i) => (
-                  <div key={i}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-dark-200">{metric.label}</span>
-                      <span className="text-xbox-green">{metric.value}% <span className="text-blue-400 text-xs">{metric.trend}</span></span>
-                    </div>
-                    <div className="h-2 bg-dark-600 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-xbox-green to-blue-500 rounded-full transition-all duration-1000"
-                        style={{ width: `${metric.value}%` }}
-                      />
+                  { step: 'Classify', body: 'Tags + primary genre assigned from the VGMS taxonomy' },
+                  { step: 'Confidence check', body: 'High / medium / low score attached to every result' },
+                  { step: 'Flag & escalate', body: 'Low-confidence games can be re-run with Deep analysis' },
+                  { step: 'Human correction', body: 'Edit any tag or genre; corrections are saved' },
+                ].map((row, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-xbox-green flex-shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-white text-sm font-medium">{row.step}</div>
+                      <div className="text-dark-300 text-xs">{row.body}</div>
                     </div>
                   </div>
                 ))}
