@@ -116,7 +116,7 @@ async def debug_connectivity():
                         "content-type": "application/json",
                     },
                     json={
-                        "model": "claude-3-5-haiku-20241022",
+                        "model": "claude-haiku-4-5-20251001",
                         "max_tokens": 10,
                         "messages": [{"role": "user", "content": "Say hi"}]
                     }
@@ -134,7 +134,7 @@ async def debug_connectivity():
             import anthropic
             client = anthropic.Anthropic(api_key=api_key)
             response = client.messages.create(
-                model="claude-3-5-haiku-20241022",
+                model="claude-haiku-4-5-20251001",
                 max_tokens=10,
                 messages=[{"role": "user", "content": "Say hi"}]
             )
