@@ -155,6 +155,21 @@ async def _get_trailer_frames(url: str, *, is_mp4: bool,
                 pass
 
 
+def _media_type_for_b64(data: str) -> str:
+    """Detect an image's real media type from its base64 prefix.
+    Store screenshots are usually JPEG but some games serve PNG (or WebP/GIF);
+    sending the wrong media_type makes the Claude API reject the request."""
+    if not data:
+        return "image/jpeg"
+    if data.startswith("iVBOR"):
+        return "image/png"
+    if data.startswith("R0lGOD"):
+        return "image/gif"
+    if data.startswith("UklGR"):
+        return "image/webp"
+    return "image/jpeg"  # JPEG base64 starts with "/9j/"
+
+
 # VGMS Schema
 VGMS_CATEGORIES = {
     'gameplay': [
@@ -1097,7 +1112,7 @@ class AsyncGameTagger:
                 for frame in src.get('frames', [])[:4]:
                     content.append({
                         "type": "image",
-                        "source": {"type": "base64", "media_type": "image/jpeg", "data": frame}
+                        "source": {"type": "base64", "media_type": _media_type_for_b64(frame), "data": frame}
                     })
 
             elif src['source'] == 'xbox':
@@ -1117,7 +1132,7 @@ class AsyncGameTagger:
                 for ss in src.get('screenshots', [])[:(1 if xbox_trailer else 2)]:
                     content.append({
                         "type": "image",
-                        "source": {"type": "base64", "media_type": "image/jpeg", "data": ss['data']}
+                        "source": {"type": "base64", "media_type": _media_type_for_b64(ss['data']), "data": ss['data']}
                     })
 
             elif src['source'] == 'steam':
@@ -1138,7 +1153,7 @@ class AsyncGameTagger:
                 for ss in src.get('screenshots', [])[:(1 if steam_trailer else 2)]:
                     content.append({
                         "type": "image",
-                        "source": {"type": "base64", "media_type": "image/jpeg", "data": ss}
+                        "source": {"type": "base64", "media_type": _media_type_for_b64(ss), "data": ss}
                     })
 
             elif src['source'] == 'wikipedia':
