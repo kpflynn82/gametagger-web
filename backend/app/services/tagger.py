@@ -155,6 +155,30 @@ async def _get_trailer_frames(url: str, *, is_mp4: bool,
                 pass
 
 
+def _shrink_image_bytes(data: bytes, max_bytes: int = 3_500_000, max_width: int = 1600) -> bytes:
+    """Keep screenshots under the Claude API's 10 MB image cap.
+    Some store screenshots are huge (20+ MB PNGs). Anything over ~3.5 MB is
+    decoded, downscaled, and re-encoded as JPEG. On any failure the original
+    bytes are returned unchanged, so this can never break a working image."""
+    if len(data) <= max_bytes or not HAS_OPENCV:
+        return data
+    try:
+        import numpy as np
+        arr = np.frombuffer(data, dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if img is None:
+            return data
+        h, w = img.shape[:2]
+        if w > max_width:
+            img = cv2.resize(img, (max_width, int(h * max_width / w)))
+        ok, buf = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if ok:
+            return buf.tobytes()
+    except Exception:
+        pass
+    return data
+
+
 def _media_type_for_b64(data: str) -> str:
     """Detect an image's real media type from its base64 prefix.
     Store screenshots are usually JPEG but some games serve PNG (or WebP/GIF);
@@ -355,7 +379,7 @@ class AsyncSteamSource:
             try:
                 r = await client.get(url, timeout=10)
                 if r.status_code == 200:
-                    return base64.b64encode(r.content).decode('utf-8')
+                    return base64.b64encode(_shrink_image_bytes(r.content)).decode('utf-8')
             except Exception:
                 pass
         return None
@@ -548,7 +572,7 @@ class AsyncXboxSource:
             try:
                 r = await client.get(url, timeout=10)
                 if r.status_code == 200:
-                    return base64.b64encode(r.content).decode('utf-8')
+                    return base64.b64encode(_shrink_image_bytes(r.content)).decode('utf-8')
             except Exception:
                 pass
         return None
