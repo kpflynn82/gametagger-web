@@ -62,6 +62,27 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* 60-second overview video */}
+      <section className="glass-card p-3 md:p-4 max-w-5xl mx-auto w-full">
+        <video
+          className="w-full aspect-video rounded-xl bg-black"
+          src="/videos/gametagger-sizzle.mp4"
+          poster="/videos/gametagger-sizzle-poster.jpg"
+          controls
+          playsInline
+          preload="metadata"
+        >
+          GameTagger in 60 seconds: the idea, how it works, and the live product.
+        </video>
+        <div className="flex flex-wrap items-center justify-between gap-2 px-2 pt-3 text-sm">
+          <span className="inline-flex items-center gap-2 text-white font-medium">
+            <Film className="h-4 w-4 text-xbox-green" />
+            GameTagger in 60 seconds
+          </span>
+          <span className="text-dark-300">The idea, how it works, and the live product</span>
+        </div>
+      </section>
+
       {/* Key Metrics */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
